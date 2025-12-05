@@ -81,6 +81,7 @@ export default function RegisterProviderForm() {
   const [showPasswordInfo, setShowPasswordInfo] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [preview, setPreview] = useState<string | null>(null);
 
   const [selectedCountry, setSelectedCountry] = useState<Country>(COUNTRIES[0]);
   const [isCountryOpen, setIsCountryOpen] = useState(false);
@@ -349,23 +350,81 @@ export default function RegisterProviderForm() {
 
         {/* IMG PERFIL (OPCIONAL) */}
         <div className="flex flex-col">
-          <label>Imagen de perfil (URL) (opcional)</label>
-          <input
-            className="border rounded-lg bg-white text-gray-900 px-3 py-2"
-            {...register("profileImgUrl", {
-              pattern: {
-                value: /^https?:\/\/.+/,
-                message: "Debes ingresar una URL válida",
-              },
-            })}
-            placeholder="Ej: https://miimagen.com/foto.jpg"
-          />
+          <label className="text-sm mb-1">Imagen de perfil (URL)</label>
+
+          <div className="flex items-center gap-2">
+            {/* INPUT URL */}
+            <input
+              id="profileImgUrl"
+              className="border rounded-lg bg-white text-gray-900 px-3 py-2 w-full"
+              placeholder="Ej: https://miimagen.com/foto.jpg"
+              {...register("profileImgUrl", {
+                pattern: {
+                  value: /^https?:\/\/.+/,
+                  message: "Debes ingresar una URL válida",
+                },
+              })}
+            />
+
+            {/* BOTÓN SUBIR — EXACTAMENTE COMO EL QUE MOSTRASTE */}
+            <label
+              htmlFor="provider-image-upload"
+              className="
+        bg-[#F1F5F9]
+        text-gray-700
+        px-4
+        py-2
+        rounded-lg
+        border
+        border-gray-300
+        cursor-pointer
+        hover:bg-[#e5e7eb]
+        text-sm
+        whitespace-nowrap
+      "
+            >
+              Subir
+            </label>
+
+            <input
+              id="provider-image-upload"
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  const url = URL.createObjectURL(file);
+                  setPreview(url);
+
+                  const inputEl = document.getElementById("profileImgUrl") as HTMLInputElement | null;
+                  if (inputEl) {
+                    inputEl.value = url;
+                    inputEl.dispatchEvent(new Event("input", { bubbles: true }));
+                  }
+                }
+              }}
+            />
+          </div>
+
           {errors.profileImgUrl && (
-            <span className="text-red-500 text-sm">
+            <span className="text-red-500 text-sm mt-1">
               {errors.profileImgUrl.message}
             </span>
           )}
+
+          {/* FOTO PREVIA */}
+          {preview && (
+            <div className="mt-3 flex justify-center">
+              <img
+                src={preview}
+                alt="preview"
+                className="w-28 h-28 rounded-full object-cover border shadow-sm"
+              />
+            </div>
+          )}
         </div>
+
 
         {/* TELÉFONO CON PAÍS */}
         <div className="flex flex-col">
@@ -454,13 +513,13 @@ export default function RegisterProviderForm() {
 
           <div className="grid grid-cols-2 gap-2 mt-1">
             {[
-              "Monday",
-              "Tuesday",
-              "Wednesday",
-              "Thursday",
-              "Friday",
-              "Saturday",
-              "Sunday",
+              "Lunes",
+              "Martes",
+              "Miércoles",
+              "Jueves",
+              "Viernes",
+              "Sábado",
+              "Domingo",
             ].map((day) => (
               <label key={day} className="flex items-center gap-2">
                 <input

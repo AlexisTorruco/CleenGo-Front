@@ -96,7 +96,8 @@ export default function RegisterFormClient() {
 
   const [loading, setLoading] = useState(false);
 
-  const [selectedCountry, setSelectedCountry] = useState<Country>(COUNTRIES[0]);
+  const [selectedCountry, setSelectedCountry] =
+    useState<Country>(COUNTRIES[0]);
   const [isCountryOpen, setIsCountryOpen] = useState(false);
 
   const [showPassword, setShowPassword] = useState(false);
@@ -402,13 +403,45 @@ export default function RegisterFormClient() {
         {/* IMG PERFIL */}
         <div className="flex flex-col">
           <label>Imagen de perfil (URL)</label>
-          <input
-            name="profileImgUrl"
-            value={form.profileImgUrl}
-            onChange={handleChange}
-            placeholder="Ej: https://miimagen.com/foto.jpg"
-            className="border px-3 py-2 rounded-lg"
-          />
+
+          <div className="flex gap-2">
+            <input
+              name="profileImgUrl"
+              value={form.profileImgUrl}
+              onChange={handleChange}
+              placeholder="Ej: https://miimagen.com/foto.jpg"
+              className="border px-3 py-2 rounded-lg flex-1"
+            />
+
+            {/* Botón para subir archivo (diseño igual al que pediste) */}
+            <label className="bg-gray-200 px-3 py-2 rounded-lg cursor-pointer hover:bg-gray-300 text-sm whitespace-nowrap flex items-center gap-2">
+              Subir
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  if (e.target.files?.[0]) {
+                    const fileUrl = URL.createObjectURL(e.target.files[0]);
+                    setForm((prev) => ({ ...prev, profileImgUrl: fileUrl }));
+                    // intentar re-validar (si quieres validar la URL, pero ErrorState no tiene profileImgUrl)
+                    // no llamamos validateField porque profileImgUrl no está en ErrorState
+                  }
+                }}
+              />
+            </label>
+          </div>
+
+          {/* Vista previa */}
+          {form.profileImgUrl && (
+            <div className="mt-3 flex justify-center">
+              <img
+                src={form.profileImgUrl}
+                alt="Vista previa"
+                className="w-28 h-28 object-cover rounded-full border shadow-sm"
+              />
+            </div>
+          )}
         </div>
 
         {/* TELÉFONO CON BANDERA SVG + CÓDIGO */}

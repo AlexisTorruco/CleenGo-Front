@@ -21,7 +21,7 @@ export default function Footer() {
 
               <li>
                 <Link
-                  href="/proveedores"
+                  href="/client/providers"
                   className="text-gray-400 hover:text-white transition-colors text-sm"
                 >
                   Proveedores
