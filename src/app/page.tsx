@@ -7,9 +7,8 @@ import { AuthProvider } from "./contexts/AuthContext";
 export default function LandingPage() {
   return (
     <AuthProvider>
-
       {/* Hero Section */}
-      <div className="min-h-screen bg-gradient-to-br from-[#0A65FF] via-[#1E73FF] to-[#3D8AFF] text-white px-4 pt-32 pb-16">
+      <div className="min-h-screen bg-linear-to-br from-[#0A65FF] via-[#1E73FF] to-[#3D8AFF] text-white px-4 pt-32 pb-16">
         <div className="max-w-7xl mx-auto">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             {/* Left Column - Content */}
@@ -168,18 +167,15 @@ export default function LandingPage() {
                       ))}
                     </div>
                     <p className="text-gray-600 leading-relaxed mb-3">
-                      "¡Excelente servicio! Mi casa quedó impecable. Totalmente
-                      recomendado."
-                    </p>
-                    <p className="text-sm text-gray-500 font-medium">
-                      María González
+                      &quot;¡Excelente servicio! Mi casa quedó impecable.
+                      Totalmente recomendado.&quot;
                     </p>
                   </div>
                 </div>
               </div>
 
               {/* Stats Card */}
-              <div className="bg-gradient-to-br from-[#2CC9C9] to-[#1E9B9B] text-white rounded-2xl p-8 shadow-2xl transform hover:scale-105 transition-transform">
+              <div className="bg-linear-to-br from-[#2CC9C9] to-[#1E9B9B] text-white rounded-2xl p-8 shadow-2xl transform hover:scale-105 transition-transform">
                 <div className="flex items-center justify-center mb-4">
                   <svg
                     className="w-16 h-16"
@@ -264,7 +260,7 @@ export default function LandingPage() {
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
             {/* Feature 1 - Rápido y Fácil */}
             <div className="bg-white rounded-3xl p-8 shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100">
-              <div className="bg-gradient-to-br from-[#0A65FF] to-[#3D8AFF] rounded-2xl w-16 h-16 flex items-center justify-center mb-6">
+              <div className="bg-linear-to-br from-[#0A65FF] to-[#3D8AFF] rounded-2xl w-16 h-16 flex items-center justify-center mb-6">
                 <svg
                   className="w-8 h-8 text-white"
                   fill="none"
@@ -289,7 +285,7 @@ export default function LandingPage() {
 
             {/* Feature 2 - 100% Verificado */}
             <div className="bg-white rounded-3xl p-8 shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100">
-              <div className="bg-gradient-to-br from-[#2CC9C9] to-[#1E9B9B] rounded-2xl w-16 h-16 flex items-center justify-center mb-6">
+              <div className="bg-linear-to-br from-[#2CC9C9] to-[#1E9B9B] rounded-2xl w-16 h-16 flex items-center justify-center mb-6">
                 <svg
                   className="w-8 h-8 text-white"
                   fill="none"
@@ -314,7 +310,7 @@ export default function LandingPage() {
 
             {/* Feature 3 - Mejor Precio */}
             <div className="bg-white rounded-3xl p-8 shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100">
-              <div className="bg-gradient-to-br from-[#5B5FFF] to-[#3D41CC] rounded-2xl w-16 h-16 flex items-center justify-center mb-6">
+              <div className="bg-linear-to-br from-[#5B5FFF] to-[#3D41CC] rounded-2xl w-16 h-16 flex items-center justify-center mb-6">
                 <svg
                   className="w-8 h-8 text-white"
                   fill="none"
@@ -339,7 +335,7 @@ export default function LandingPage() {
 
             {/* Feature 4 - Calidad Garantizada */}
             <div className="bg-white rounded-3xl p-8 shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100">
-              <div className="bg-gradient-to-br from-[#0A65FF] to-[#3D8AFF] rounded-2xl w-16 h-16 flex items-center justify-center mb-6">
+              <div className="bg-linear-to-br from-[#0A65FF] to-[#3D8AFF] rounded-2xl w-16 h-16 flex items-center justify-center mb-6">
                 <svg
                   className="w-8 h-8 text-white"
                   fill="none"
@@ -366,7 +362,7 @@ export default function LandingPage() {
       </div>
 
       {/* 3 Steps Section */}
-      <div className="bg-gradient-to-br from-gray-50 to-blue-50 py-20 px-4">
+      <div className="bg-linear-to-br from-gray-50 to-blue-50 py-20 px-4">
         <div className="max-w-7xl mx-auto">
           {/* Section Header */}
           <div className="text-center mb-16">
@@ -382,18 +378,18 @@ export default function LandingPage() {
           <div className="grid md:grid-cols-3 gap-8 relative">
             {/* Connector Lines */}
             <div
-              className="hidden md:block absolute top-32 left-1/4 right-1/4 h-1 bg-gradient-to-r from-[#0A65FF] to-[#2CC9C9]"
+              className="hidden md:block absolute top-32 left-1/4 right-1/4 h-1 bg-linear-to-r from-[#0A65FF] to-[#2CC9C9]"
               style={{ width: "calc(50% - 2rem)", left: "calc(25% + 2rem)" }}
             ></div>
             <div
-              className="hidden md:block absolute top-32 right-1/4 h-1 bg-gradient-to-r from-[#0A65FF] to-[#2CC9C9]"
+              className="hidden md:block absolute top-32 right-1/4 h-1 bg-linear-to-r from-[#0A65FF] to-[#2CC9C9]"
               style={{ width: "calc(25% - 2rem)", left: "calc(50% + 2rem)" }}
             ></div>
 
             {/* Step 1 - Calcula tu servicio */}
             <div className="bg-white rounded-3xl p-8 shadow-lg hover:shadow-2xl transition-all duration-300 relative">
               <div className="relative mb-6">
-                <div className="bg-gradient-to-br from-[#0A65FF] to-[#3D8AFF] rounded-full w-24 h-24 flex items-center justify-center mx-auto">
+                <div className="bg-linear-to-br from-[#0A65FF] to-[#3D8AFF] rounded-full w-24 h-24 flex items-center justify-center mx-auto">
                   <svg
                     className="w-12 h-12 text-white"
                     fill="none"
@@ -424,7 +420,7 @@ export default function LandingPage() {
             {/* Step 2 - Elige tu proveedor */}
             <div className="bg-white rounded-3xl p-8 shadow-lg hover:shadow-2xl transition-all duration-300 relative">
               <div className="relative mb-6">
-                <div className="bg-gradient-to-br from-[#0A65FF] to-[#3D8AFF] rounded-full w-24 h-24 flex items-center justify-center mx-auto">
+                <div className="bg-linear-to-br from-[#0A65FF] to-[#3D8AFF] rounded-full w-24 h-24 flex items-center justify-center mx-auto">
                   <svg
                     className="w-12 h-12 text-white"
                     fill="none"
@@ -455,7 +451,7 @@ export default function LandingPage() {
             {/* Step 3 - ¡Listo! Disfruta */}
             <div className="bg-white rounded-3xl p-8 shadow-lg hover:shadow-2xl transition-all duration-300 relative">
               <div className="relative mb-6">
-                <div className="bg-gradient-to-br from-[#0A65FF] to-[#3D8AFF] rounded-full w-24 h-24 flex items-center justify-center mx-auto">
+                <div className="bg-linear-to-br from-[#0A65FF] to-[#3D8AFF] rounded-full w-24 h-24 flex items-center justify-center mx-auto">
                   <svg
                     className="w-12 h-12 text-white"
                     fill="none"
@@ -486,7 +482,7 @@ export default function LandingPage() {
       </div>
 
       {/* Section - Ready to Start */}
-      <div className="bg-gradient-to-br from-[#0A65FF] via-[#1E73FF] to-[#2CC9C9] py-20 px-4">
+      <div className="bg-linear-to-br from-[#0A65FF] via-[#1E73FF] to-[#2CC9C9] py-20 px-4">
         <div className="max-w-4xl mx-auto text-center">
           {/* Icon */}
           <div className="mb-8">

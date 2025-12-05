@@ -1,12 +1,6 @@
-"use client";
+'use client';
 
-import {
-  createContext,
-  useContext,
-  useState,
-  useEffect,
-  ReactNode,
-} from "react";
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
 interface User {
   id: string;
@@ -14,51 +8,83 @@ interface User {
   name: string;
   surname?: string;
   profileImgUrl?: string;
-  role: "client" | "provider";
+  role: 'client' | 'provider';
 }
 
 interface AuthContextType {
   user: User | null;
   token: string | null;
-  login: (user: any, token: string) => void;
+  login: (user: Record<string, unknown>, token: string) => void;
   logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(null);
+  const [user, setUser] = useState<User | null>(() => {
+    if (typeof window === 'undefined') return null;
 
-  // Mantener sesión al recargar (solo corre en cliente)
-  useEffect(() => {
-    const storedUser =
-      typeof window !== "undefined" ? localStorage.getItem("user") : null;
-    const storedToken =
-      typeof window !== "undefined" ? localStorage.getItem("token") : null;
-
-    if (storedUser && storedToken) {
-      setUser(JSON.parse(storedUser));
-      setToken(storedToken);
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      try {
+        return JSON.parse(storedUser);
+      } catch (err) {
+        console.error('Error parsing stored user:', err);
+        localStorage.removeItem('user');
+        return null;
+      }
     }
+    return null;
+  });
+
+  const [token, setToken] = useState<string | null>(() => {
+    if (typeof window === 'undefined') return null;
+    return localStorage.getItem('token');
+  });
+
+  // Sincronizar cambios de storage en otras ventanas
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const storedUser = localStorage.getItem('user');
+      const storedToken = localStorage.getItem('token');
+
+      if (storedUser && storedToken) {
+        try {
+          setUser(JSON.parse(storedUser));
+          setToken(storedToken);
+        } catch (err) {
+          console.error('Error parsing stored user:', err);
+        }
+      } else {
+        setUser(null);
+        setToken(null);
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
-  const login = (rawUser: any, token: string) => {
+  const login = (rawUser: Record<string, unknown>, token: string) => {
+    // Validar y normalizar el rol
+    const validRoles = ['client', 'provider'];
+    const role = validRoles.includes(String(rawUser.role)) ? String(rawUser.role) : 'client';
+
     const normalizedUser: User = {
-      id: rawUser.id,
-      email: rawUser.email,
-      name: rawUser.name || rawUser.full_name || "",
-      surname: rawUser.surname || "",
-      profileImgUrl: rawUser.profileImgUrl || rawUser.avatar_url || "",
-       role: rawUser.role,  
+      id: String(rawUser.id),
+      email: String(rawUser.email),
+      name: String(rawUser.name || rawUser.full_name || ''),
+      surname: String(rawUser.surname || ''),
+      profileImgUrl: String(rawUser.profileImgUrl || rawUser.avatar_url || ''),
+      role: role as 'client' | 'provider',
     };
 
     setUser(normalizedUser);
     setToken(token);
 
-    if (typeof window !== "undefined") {
-      localStorage.setItem("user", JSON.stringify(normalizedUser));
-      localStorage.setItem("token", token);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('user', JSON.stringify(normalizedUser));
+      localStorage.setItem('token', token);
     }
   };
 
@@ -66,23 +92,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setUser(null);
     setToken(null);
 
-    if (typeof window !== "undefined") {
-      localStorage.removeItem("user");
-      localStorage.removeItem("token");
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('user');
+      localStorage.removeItem('token');
     }
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, login, logout }}>
-      {children}
-    </AuthContext.Provider>
+    <AuthContext.Provider value={{ user, token, login, logout }}>{children}</AuthContext.Provider>
   );
 };
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error("useAuth debe usarse dentro de un AuthProvider");
+    throw new Error('useAuth debe usarse dentro de un AuthProvider');
   }
   return context;
 };

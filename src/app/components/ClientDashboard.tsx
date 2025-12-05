@@ -1,516 +1,467 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { useAuth } from '@/app/contexts/AuthContext';
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-} from '@/app/components/ui/Card';
-import { Badge } from '../components/ui/Badge';
+import { useAuth } from '../contexts/AuthContext';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
+import {
+  User,
+  Mail,
+  Phone,
+  CheckCircle,
+  DollarSign,
+  Clock,
+  Calendar,
+  TrendingUp,
+  Star,
+  Edit3,
+  Package,
+  Loader2,
+  Award,
+  Zap,
+} from 'lucide-react';
 
-// 🔹 Interfaces
-interface IDashboardData {
-  appointments: IAppointment[];
-  stats?: {
-    totalSpent?: number;
-    completedServices?: number;
-    upcomingServices?: number;
-  };
-}
-
-interface IAppointment {
+// ============================================
+// INTERFACES
+// ============================================
+interface Appointment {
   id: string;
-  date: string;
-  cost: number;
   status: 'completed' | 'scheduled' | 'in-progress' | 'cancelled';
-  provider: {
-    name: string;
-  };
-  service?: {
-    name: string;
-    description?: string;
-  };
-  address?: string;
+  cost: number;
+  date?: string;
   rating?: number;
-  review?: string;
+  service?: { name: string };
+  provider?: { name: string };
+  [key: string]: unknown;
 }
 
-const ClientDashboard = () => {
+interface UserProfile {
+  id: string;
+  name: string;
+  surname: string;
+  email: string;
+  profileImgUrl: string;
+  phone?: string;
+  [key: string]: unknown;
+}
+
+// ============================================
+// COMPONENTE
+// ============================================
+export default function ClientDashboard() {
   const { user, token } = useAuth();
-  const [dashboardData, setDashboardData] = useState<IDashboardData | null>(null);
+  const router = useRouter();
+
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [isEditing, setIsEditing] = useState(false);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [stats, setStats] = useState({
+    totalSpent: 0,
+    completedServices: 0,
+    upcomingServices: 0,
+    averageRating: 0,
+  });
 
-  // Estadísticas calculadas
-  const appointments = dashboardData?.appointments || [];
-  const totalSpent =
-    dashboardData?.stats?.totalSpent || appointments.reduce((sum, a) => sum + a.cost, 0);
-  const completedServices =
-    dashboardData?.stats?.completedServices ||
-    appointments.filter((a) => a.status === 'completed').length;
-  const upcomingServices =
-    dashboardData?.stats?.upcomingServices ||
-    appointments.filter((a) => a.status === 'scheduled').length;
+  // ======================
+  // FUNCIÓN PARA CARGAR DATOS
+  // ======================
+  const fetchData = async () => {
+    if (!user?.id || !token) {
+      console.error('User or token not available');
+      return;
+    }
 
-  // Estadísticas de cuenta
-  const accountStats = {
-    memberSince: 'Nov 2024',
-    servicesHired: appointments.length,
-    rating: 4.9,
-    status: 'Activo',
-  };
+    try {
+      setLoading(true);
 
-  // Cargar datos del dashboard
-  useEffect(() => {
-    const fetchDashboard = async () => {
-      if (!token || !user?.id) {
-        setError('No hay sesión activa');
-        setLoading(false);
-        return;
+      // Fetch profile
+      const profileRes = await fetch(`http://localhost:3000/user/profile/${user.id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const profileData = await profileRes.json();
+      setProfile(profileData);
+
+      // Fetch appointments
+      const appointmentsRes = await fetch(`http://localhost:3000/appointments`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const contentType = appointmentsRes.headers.get('content-type');
+      let allAppointments: Appointment[] = [];
+
+      if (contentType && contentType.includes('application/json')) {
+        const data = await appointmentsRes.json();
+        allAppointments = Array.isArray(data) ? data : data.appointments || [];
       }
 
-      try {
-        // 🔴 CUANDO TU COMPAÑERA TERMINE EL ENDPOINT, DESCOMENTA ESTO:
-        /*
-        const response = await fetch(
-          `${import.meta.env.VITE_BACKEND_URL}user/dashboard/${user.id}`,
-          {
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json',
-            },
-          }
-        );
+      const userAppointments = allAppointments.filter((apt) => apt.clientId === user.id);
+      setAppointments(userAppointments);
 
-        if (!response.ok) {
-          throw new Error(`Error ${response.status}: ${response.statusText}`);
-        }
+      // Calculate stats
+      const completed = userAppointments.filter((a) => a.status === 'completed');
+      const upcoming = userAppointments.filter((a) => a.status === 'scheduled');
+      const total = completed.reduce((acc, curr) => acc + (curr.cost || 0), 0);
 
-        const data = await response.json();
-        setDashboardData(data);
-        */
+      const ratedServices = completed.filter((a) => a.rating);
+      const avgRating =
+        ratedServices.length > 0
+          ? ratedServices.reduce((acc, curr) => acc + (curr.rating || 0), 0) / ratedServices.length
+          : 0;
 
-        // 🔹 MODO DESARROLLO: Datos mock
-        console.log('⚠️ Usando datos mock - El endpoint aún no está implementado');
-        console.log('👤 User ID:', user.id);
-        console.log('🔑 Token disponible:', !!token);
-
-        // Simular delay de red
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-
-        setDashboardData(MOCK_DASHBOARD_DATA);
-      } catch (error) {
-        console.error('Error al cargar dashboard:', error);
-        setError('No se pudieron cargar los datos del dashboard');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchDashboard();
-  }, [token, user?.id]);
-
-  // Función para obtener el badge según el estado
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return <Badge variant="success">✅ Completado</Badge>;
-      case 'scheduled':
-        return <Badge variant="info">📅 Programado</Badge>;
-      case 'in-progress':
-        return <Badge variant="warning">🔄 En Progreso</Badge>;
-      case 'cancelled':
-        return <Badge variant="danger">❌ Cancelado</Badge>;
-      default:
-        return <Badge>{status}</Badge>;
+      setStats({
+        totalSpent: total,
+        completedServices: completed.length,
+        upcomingServices: upcoming.length,
+        averageRating: Math.round(avgRating * 10) / 10,
+      });
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
+  // ======================
+  // EFFECT PARA CARGAR AL MONTAR
+  // ======================
+  useEffect(() => {
+    if (!user || !token) {
+      router.push('/login');
+      return;
+    }
+
+    fetchData();
+
+    // Recargar datos cuando la ventana vuelve a tener foco
+    const handleFocus = () => {
+      fetchData();
+    };
+
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, token]);
+
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 pt-20">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Cargando dashboard...</p>
+          <Loader2 className="w-16 h-16 text-blue-600 animate-spin mx-auto mb-4" />
+          <p className="text-gray-600 text-lg font-medium">Cargando tu dashboard...</p>
         </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 pt-20">
-        <Card className="max-w-md">
-          <CardContent className="pt-6">
-            <div className="text-center">
-              <div className="text-6xl mb-4">⚠️</div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">Error</h3>
-              <p className="text-gray-600">{error}</p>
-            </div>
-          </CardContent>
-        </Card>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 pt-24 pb-12 px-6">
-      <div className="max-w-7xl mx-auto space-y-8">
-        {/* ============================================ */}
-        {/* SECCIÓN 1: INFORMACIÓN PERSONAL             */}
-        {/* ============================================ */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Tarjeta de perfil */}
-          <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
-            <Card className="bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-xl">
-              <CardContent className="pt-6 text-center">
-                {/* Avatar */}
-                <div className="w-24 h-24 mx-auto mb-4 rounded-full bg-white/20 flex items-center justify-center">
-                  {user?.profileImgUrl ? (
-                    <img
-                      src={user.profileImgUrl}
-                      alt={user.name}
-                      className="w-full h-full rounded-full object-cover"
-                    />
-                  ) : (
-                    <svg className="w-12 h-12 text-white" fill="currentColor" viewBox="0 0 20 20">
-                      <path
-                        fillRule="evenodd"
-                        d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                  )}
-                </div>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-cyan-50 pt-24 pb-12 px-4">
+      {/* Decorative background elements */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none opacity-30">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-blue-400 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-0 left-0 w-96 h-96 bg-cyan-400 rounded-full blur-3xl"></div>
+      </div>
 
-                <h2 className="text-2xl font-bold mb-1">{user?.name}</h2>
-                <p className="text-blue-100 text-sm mb-4">Cliente</p>
-
-                <button
-                  onClick={() => setIsEditing(!isEditing)}
-                  className="w-full bg-white text-blue-600 py-2 px-4 rounded-lg font-semibold hover:bg-blue-50 transition-colors flex items-center justify-center gap-2"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                    />
-                  </svg>
-                  Editar Perfil
-                </button>
-              </CardContent>
-            </Card>
-          </motion.div>
-
-          {/* Información y estadísticas */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Información Personal */}
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-              <Card className="shadow-lg">
-                <CardHeader>
-                  <CardTitle className="text-gray-900">Información Personal</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
-                      <svg
-                        className="w-5 h-5 text-blue-600"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                        />
-                      </svg>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-600 font-medium">Email</p>
-                      <p className="font-semibold text-gray-900">{user?.email}</p>
-                    </div>
-                  </div>
-
-                  <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
-                    <p className="text-sm text-amber-900 mb-3 font-medium">
-                      Completa tu perfil para una mejor experiencia
-                    </p>
-                    <button className="text-sm bg-white border-2 border-amber-400 text-amber-700 px-4 py-2 rounded-lg hover:bg-amber-50 transition-colors font-semibold">
-                      Completar perfil
-                    </button>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-
-            {/* Estadísticas de Cuenta */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-            >
-              <Card className="shadow-lg">
-                <CardHeader>
-                  <CardTitle className="text-gray-900">Estadísticas de Cuenta</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="text-center p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg border border-blue-200">
-                      <p className="text-2xl font-bold text-blue-900">{accountStats.memberSince}</p>
-                      <p className="text-xs text-blue-700 mt-1 font-medium">Miembro desde</p>
-                    </div>
-                    <div className="text-center p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-lg border border-green-200">
-                      <p className="text-2xl font-bold text-green-900">
-                        {accountStats.servicesHired}
-                      </p>
-                      <p className="text-xs text-green-700 mt-1 font-medium">
-                        Servicios contratados
-                      </p>
-                    </div>
-                    <div className="text-center p-4 bg-gradient-to-br from-amber-50 to-amber-100 rounded-lg border border-amber-200">
-                      <p className="text-2xl font-bold text-amber-900 flex items-center justify-center gap-1">
-                        {accountStats.rating} <span className="text-amber-500">⭐</span>
-                      </p>
-                      <p className="text-xs text-amber-700 mt-1 font-medium">Calificación</p>
-                    </div>
-                    <div className="text-center p-4 bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-lg border border-emerald-200">
-                      <p className="text-2xl font-bold text-emerald-900">{accountStats.status}</p>
-                      <p className="text-xs text-emerald-700 mt-1 font-medium">Estado</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          </div>
-        </div>
-
-        {/* ============================================ */}
-        {/* SECCIÓN 2: DASHBOARD DE SERVICIOS          */}
-        {/* ============================================ */}
-
-        {/* Header del dashboard */}
+      <div className="max-w-7xl mx-auto relative z-10">
+        {/* ================= PROFILE HEADER ================= */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="mt-12"
+          className="bg-white rounded-3xl shadow-lg border border-gray-100 overflow-hidden mb-8"
         >
-          <h2 className="text-3xl font-bold text-gray-900 mb-2">Mis Servicios 🧹</h2>
-          <p className="text-gray-700">Resumen de tus servicios de limpieza</p>
+          {/* Blue header bar */}
+          <div className="h-2 bg-gradient-to-r from-blue-600 via-cyan-500 to-blue-600"></div>
+
+          <div className="p-8">
+            <div className="flex flex-col lg:flex-row items-center gap-8">
+              {/* Profile Picture */}
+              <div className="relative">
+                <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 to-cyan-500 rounded-full blur opacity-40"></div>
+                {profile?.profileImgUrl ? (
+                  <img
+                    src={profile.profileImgUrl}
+                    alt="Perfil"
+                    className="relative w-32 h-32 rounded-full object-cover border-4 border-white shadow-xl"
+                  />
+                ) : (
+                  <div className="relative w-32 h-32 rounded-full bg-gradient-to-br from-blue-600 to-cyan-500 flex items-center justify-center border-4 border-white shadow-xl">
+                    <User className="w-16 h-16 text-white" />
+                  </div>
+                )}
+                <div className="absolute -bottom-2 -right-2 bg-emerald-500 rounded-full p-2.5 shadow-lg border-3 border-white">
+                  <CheckCircle className="w-6 h-6 text-white" />
+                </div>
+              </div>
+
+              {/* Profile Info */}
+              <div className="flex-1 text-center lg:text-left">
+                <h1 className="text-4xl font-bold text-gray-900 mb-3">
+                  {profile?.name} {profile?.surname}
+                </h1>
+
+                <div className="space-y-2 mb-5">
+                  <div className="flex items-center gap-2 text-gray-600 justify-center lg:justify-start">
+                    <div className="p-1.5 bg-blue-100 rounded-lg">
+                      <Mail className="w-4 h-4 text-blue-600" />
+                    </div>
+                    <span className="font-medium">{user?.email}</span>
+                  </div>
+                  {profile?.phone && (
+                    <div className="flex items-center gap-2 text-gray-600 justify-center lg:justify-start">
+                      <div className="p-1.5 bg-cyan-100 rounded-lg">
+                        <Phone className="w-4 h-4 text-cyan-600" />
+                      </div>
+                      <span className="font-medium">{profile.phone}</span>
+                    </div>
+                  )}
+                </div>
+
+                <motion.button
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => router.push('/client/profile/edit')}
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-xl font-semibold hover:shadow-lg transition-all"
+                >
+                  <Edit3 className="w-4 h-4" />
+                  Editar Perfil
+                </motion.button>
+              </div>
+
+              {/* Stats Badge */}
+              <div className="lg:ml-auto">
+                <div className="bg-gradient-to-br from-blue-600 to-cyan-600 rounded-2xl p-8 text-white text-center shadow-xl min-w-[200px] relative overflow-hidden">
+                  <div className="absolute inset-0 bg-white opacity-10"></div>
+                  <Award className="w-12 h-12 mx-auto mb-3 relative" />
+                  <div className="text-5xl font-bold mb-2 relative">{stats.completedServices}</div>
+                  <div className="text-sm opacity-90 font-medium relative">
+                    Servicios Realizados
+                  </div>
+                  {stats.averageRating > 0 && (
+                    <div className="mt-3 flex items-center justify-center gap-1 relative">
+                      <Star className="w-5 h-5 fill-yellow-300 text-yellow-300" />
+                      <span className="text-lg font-bold">{stats.averageRating}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
         </motion.div>
 
-        {/* Estadísticas de servicios */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* ================= STATS CARDS ================= */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          {/* Total Spent */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            whileHover={{ y: -4 }}
+            className="group relative"
+          >
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl blur opacity-20 group-hover:opacity-30 transition-opacity"></div>
+            <div className="relative bg-white rounded-2xl shadow-lg border border-gray-100 p-6 hover:shadow-xl transition-all">
+              <div className="flex items-start justify-between mb-4">
+                <div className="p-4 bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl shadow-md">
+                  <DollarSign className="w-7 h-7 text-white" />
+                </div>
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <TrendingUp className="w-5 h-5 text-blue-600" />
+                </div>
+              </div>
+              <p className="text-gray-500 text-sm font-semibold mb-2">Total Gastado</p>
+              <p className="text-4xl font-bold text-gray-900 mb-1">
+                ${stats.totalSpent.toLocaleString()}
+              </p>
+              <p className="text-xs text-gray-500">En servicios completados</p>
+            </div>
+          </motion.div>
+
+          {/* Completed */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            whileHover={{ y: -4 }}
+            className="group relative"
+          >
+            <div className="absolute inset-0 bg-gradient-to-br from-emerald-500 to-green-600 rounded-2xl blur opacity-20 group-hover:opacity-30 transition-opacity"></div>
+            <div className="relative bg-white rounded-2xl shadow-lg border border-gray-100 p-6 hover:shadow-xl transition-all">
+              <div className="flex items-start justify-between mb-4">
+                <div className="p-4 bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl shadow-md">
+                  <CheckCircle className="w-7 h-7 text-white" />
+                </div>
+              </div>
+              <p className="text-gray-500 text-sm font-semibold mb-2">Servicios Realizados</p>
+              <p className="text-4xl font-bold text-gray-900 mb-1">{stats.completedServices}</p>
+              <p className="text-xs text-gray-500">Limpiezas finalizadas</p>
+            </div>
+          </motion.div>
+
+          {/* Upcoming */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
+            whileHover={{ y: -4 }}
+            className="group relative"
           >
-            <Card className="bg-gradient-to-br from-emerald-500 to-emerald-600 text-white shadow-xl border-0">
-              <CardContent className="pt-6">
-                <div className="text-sm font-semibold mb-1 opacity-90">Total Gastado</div>
-                <div className="text-4xl font-bold">${totalSpent.toLocaleString()}</div>
-                <div className="text-xs mt-2 opacity-80">En servicios de limpieza</div>
-              </CardContent>
-            </Card>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-          >
-            <Card className="bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-xl border-0">
-              <CardContent className="pt-6">
-                <div className="text-sm font-semibold mb-1 opacity-90">Servicios Completados</div>
-                <div className="text-4xl font-bold">{completedServices}</div>
-                <div className="text-xs mt-2 opacity-80">Trabajos finalizados</div>
-              </CardContent>
-            </Card>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5 }}
-          >
-            <Card className="bg-gradient-to-br from-purple-500 to-purple-600 text-white shadow-xl border-0">
-              <CardContent className="pt-6">
-                <div className="text-sm font-semibold mb-1 opacity-90">Próximos Servicios</div>
-                <div className="text-4xl font-bold">{upcomingServices}</div>
-                <div className="text-xs mt-2 opacity-80">Programados</div>
-              </CardContent>
-            </Card>
+            <div className="absolute inset-0 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-2xl blur opacity-20 group-hover:opacity-30 transition-opacity"></div>
+            <div className="relative bg-white rounded-2xl shadow-lg border border-gray-100 p-6 hover:shadow-xl transition-all">
+              <div className="flex items-start justify-between mb-4">
+                <div className="p-4 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-xl shadow-md">
+                  <Clock className="w-7 h-7 text-white" />
+                </div>
+              </div>
+              <p className="text-gray-500 text-sm font-semibold mb-2">Próximas Limpiezas</p>
+              <p className="text-4xl font-bold text-gray-900 mb-1">{stats.upcomingServices}</p>
+              <p className="text-xs text-gray-500">Programadas</p>
+            </div>
           </motion.div>
         </div>
 
-        {/* Lista de Appointments */}
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }}>
-          <Card className="shadow-xl">
-            <CardHeader className="border-b border-gray-200 bg-gray-50">
-              <CardTitle className="text-gray-900">Historial de Servicios</CardTitle>
-              <CardDescription className="text-gray-600">
-                Todos tus servicios contratados
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="pt-6">
-              {appointments.length === 0 ? (
-                <div className="text-center py-12 text-gray-500">
-                  <div className="text-6xl mb-4">🧹</div>
-                  <p className="text-lg font-semibold mb-2 text-gray-900">No tenés servicios aún</p>
-                  <p className="text-sm text-gray-600">Contratá tu primer servicio de limpieza</p>
+        {/* ================= SERVICES SECTION ================= */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="bg-white rounded-3xl shadow-lg border border-gray-100 overflow-hidden"
+        >
+          {/* Header with gradient */}
+          <div className="bg-gradient-to-r from-blue-600 via-cyan-500 to-blue-600 px-8 py-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-white/20 backdrop-blur-sm rounded-xl">
+                  <Calendar className="w-7 h-7 text-white" />
                 </div>
-              ) : (
-                <div className="space-y-4">
-                  {appointments.map((appointment, index) => (
-                    <motion.div
-                      key={appointment.id}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: index * 0.1 }}
-                      className="border-2 border-gray-200 rounded-xl p-5 hover:border-emerald-300 hover:shadow-lg transition-all bg-white"
-                    >
-                      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                        {/* Info del servicio */}
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-3">
-                            <span className="text-3xl">🏠</span>
-                            <div>
-                              <h4 className="font-bold text-gray-900 text-lg">
-                                {appointment.service?.name || 'Servicio de Limpieza'}
-                              </h4>
-                              <p className="text-sm text-gray-600 font-medium">
-                                Proveedor: {appointment.provider.name}
-                              </p>
-                            </div>
-                          </div>
+                <h2 className="text-3xl font-bold text-white">Mis Servicios</h2>
+              </div>
 
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm mt-4">
-                            <div className="flex items-start gap-2">
-                              <span className="text-blue-600 font-semibold">📅 Fecha:</span>
-                              <p className="font-semibold text-gray-900">
-                                {new Date(appointment.date).toLocaleDateString('es-AR')}
-                              </p>
+              {appointments.length > 0 && (
+                <span className="px-5 py-2 bg-white/20 backdrop-blur-sm text-white rounded-full text-sm font-bold">
+                  {appointments.length} total
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div className="p-8">
+            {/* Empty State */}
+            {appointments.length === 0 && (
+              <div className="text-center py-16">
+                <div className="relative inline-block mb-6">
+                  <div className="absolute inset-0 bg-blue-600 rounded-full blur opacity-20"></div>
+                  <div className="relative w-24 h-24 bg-gradient-to-br from-blue-600 to-cyan-500 rounded-full flex items-center justify-center shadow-lg">
+                    <Package className="w-12 h-12 text-white" />
+                  </div>
+                </div>
+                <h3 className="text-2xl font-bold text-gray-900 mb-3">No tienes servicios aún</h3>
+                <p className="text-gray-600 mb-8 max-w-md mx-auto text-lg">
+                  Agenda tu servicio en menos de 5 minutos. ¡Rápido y fácil!
+                </p>
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => router.push('/client/providers')}
+                  className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-xl font-bold hover:shadow-xl transition-all text-lg"
+                >
+                  <Zap className="w-5 h-5" />
+                  Explorar Proveedores
+                </motion.button>
+              </div>
+            )}
+
+            {/* Services List */}
+            <div className="space-y-4">
+              {appointments.map((appointment, index) => (
+                <motion.div
+                  key={appointment.id}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                  whileHover={{ x: 4 }}
+                  className="relative group"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-cyan-500/10 rounded-2xl blur-sm opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                  <div className="relative bg-gradient-to-br from-gray-50 to-white border-2 border-gray-100 rounded-2xl p-6 hover:shadow-lg hover:border-blue-200 transition-all">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-3">
+                          <span
+                            className={`px-4 py-1.5 rounded-full text-xs font-bold shadow-sm ${
+                              appointment.status === 'completed'
+                                ? 'bg-gradient-to-r from-emerald-500 to-green-500 text-white'
+                                : appointment.status === 'scheduled'
+                                ? 'bg-gradient-to-r from-blue-600 to-cyan-500 text-white'
+                                : appointment.status === 'in-progress'
+                                ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white'
+                                : 'bg-gradient-to-r from-red-500 to-pink-500 text-white'
+                            }`}
+                          >
+                            {appointment.status === 'completed'
+                              ? '✓ Completado'
+                              : appointment.status === 'scheduled'
+                              ? '📅 Programado'
+                              : appointment.status === 'in-progress'
+                              ? '⏳ En Progreso'
+                              : '✗ Cancelado'}
+                          </span>
+
+                          {appointment.rating && (
+                            <div className="flex items-center gap-1 bg-gradient-to-r from-yellow-400 to-amber-400 px-3 py-1.5 rounded-full shadow-sm">
+                              <Star className="w-4 h-4 fill-white text-white" />
+                              <span className="text-xs font-bold text-white">
+                                {appointment.rating}
+                              </span>
                             </div>
-                            <div className="flex items-start gap-2">
-                              <span className="text-red-600 font-semibold">📍 Dirección:</span>
-                              <p className="font-semibold text-gray-900">
-                                {appointment.address || 'No especificada'}
-                              </p>
-                            </div>
-                            <div className="flex items-start gap-2">
-                              <span className="text-amber-600 font-semibold">⭐ Calificación:</span>
-                              <p className="font-semibold text-gray-900">
-                                {appointment.rating ? `${appointment.rating}/5` : 'Sin calificar'}
-                              </p>
-                            </div>
-                          </div>
+                          )}
                         </div>
 
-                        {/* Precio y Estado */}
-                        <div className="flex md:flex-col items-center md:items-end gap-3">
-                          {getStatusBadge(appointment.status)}
-                          <div className="text-right">
-                            <div className="text-3xl font-bold text-emerald-600">
-                              ${appointment.cost.toLocaleString()}
-                            </div>
+                        {appointment.service?.name && (
+                          <p className="font-bold text-gray-900 mb-2 text-lg">
+                            {appointment.service.name}
+                          </p>
+                        )}
+
+                        {appointment.date && (
+                          <div className="flex items-center gap-2 text-gray-600 text-sm mb-1">
+                            <Calendar className="w-4 h-4 text-blue-600" />
+                            {new Date(appointment.date).toLocaleDateString('es-MX', {
+                              weekday: 'long',
+                              year: 'numeric',
+                              month: 'long',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
                           </div>
-                        </div>
+                        )}
+
+                        {appointment.provider?.name && (
+                          <p className="text-sm text-gray-500">
+                            Proveedor:{' '}
+                            <span className="font-semibold">{appointment.provider.name}</span>
+                          </p>
+                        )}
                       </div>
 
-                      {/* Reseña si existe */}
-                      {appointment.review && (
-                        <div className="mt-4 pt-4 border-t border-gray-200">
-                          <p className="text-sm text-gray-700 italic font-medium bg-gray-50 p-3 rounded-lg">
-                            &quot;{appointment.review}&quot;
+                      <div className="flex items-center gap-4">
+                        <div className="text-right bg-gradient-to-br from-blue-50 to-cyan-50 px-6 py-4 rounded-xl">
+                          <p className="text-3xl font-bold text-blue-600">
+                            ${appointment.cost.toLocaleString()}
                           </p>
+                          <p className="text-xs text-gray-600 font-semibold">MXN</p>
                         </div>
-                      )}
-                    </motion.div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        {/* Botón de acción */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.7 }}
-          className="text-center pb-8"
-        >
-          <button className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-bold py-4 px-10 rounded-xl shadow-2xl hover:shadow-3xl transition-all transform hover:scale-105">
-            ➕ Contratar Nuevo Servicio
-          </button>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </div>
         </motion.div>
       </div>
     </div>
   );
-};
-
-// 🔹 Datos mock para desarrollo
-const MOCK_DASHBOARD_DATA: IDashboardData = {
-  appointments: [
-    {
-      id: '1',
-      date: '2024-11-25T10:00:00Z',
-      cost: 5000,
-      status: 'completed',
-      provider: {
-        name: 'María González',
-      },
-      service: {
-        name: 'Limpieza Profunda',
-        description: 'Limpieza completa del hogar',
-      },
-      address: 'Av. Corrientes 1234, CABA',
-      rating: 5,
-      review: 'Excelente servicio, muy profesional y puntual. Dejó todo impecable.',
-    },
-    {
-      id: '2',
-      date: '2024-12-05T14:00:00Z',
-      cost: 7500,
-      status: 'scheduled',
-      provider: {
-        name: 'Juan Pérez',
-      },
-      service: {
-        name: 'Limpieza Express',
-      },
-      address: 'Av. Libertador 5678, CABA',
-    },
-    {
-      id: '3',
-      date: '2024-11-15T09:00:00Z',
-      cost: 4500,
-      status: 'completed',
-      provider: {
-        name: 'Ana Martínez',
-      },
-      service: {
-        name: 'Limpieza de Oficina',
-      },
-      address: 'Av. Santa Fe 3456, CABA',
-      rating: 4,
-    },
-  ],
-  stats: {
-    totalSpent: 17000,
-    completedServices: 2,
-    upcomingServices: 1,
-  },
-};
-
-export default ClientDashboard;
+}
