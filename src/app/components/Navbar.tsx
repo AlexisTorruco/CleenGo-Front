@@ -12,19 +12,19 @@ export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
 
-  // 馃憞 Evitar errores de hidrataci贸n (solo renderizar en cliente)
+  // 👇 Evitar errores de hidratación (solo renderizar en cliente)
   useEffect(() => {
     setMounted(true);
   }, []);
 
   if (!mounted) return null;
 
-  // 馃憠 Cerrar men煤 cuando se hace click en alg煤n link
+  // 👉 Cerrar menú cuando se hace click en algún link
   const handleMenuItemClick = () => {
     setIsOpen(false);
   };
 
-  // 馃憠 Logout que tambi茅n cierra el men煤
+  // 👉 Logout que también cierra el menú
   const handleLogout = () => {
     logout();
     setIsOpen(false);
@@ -198,7 +198,7 @@ export default function Navbar() {
                 </svg>
               </Link>
               <span className="text-gray-700 font-medium text-center">
-                隆Hola,{" "}
+                ¡Hola,{" "}
                 <span className="text-teal-500 font-semibold">{user.name}</span>!
               </span>
               <button
@@ -280,7 +280,7 @@ export default function Navbar() {
                 </svg>
               </Link>
               <span className="text-gray-700 font-medium text-center">
-                隆Hola,{" "}
+                ¡Hola,{" "}
                 <span className="text-teal-500 font-semibold">{user.name}</span>!
               </span>
               <button
