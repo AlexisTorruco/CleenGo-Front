@@ -8,25 +8,37 @@ import { useAuth } from "@/app/contexts/AuthContext";
 export default function Navbar() {
   const { user, logout } = useAuth();
   const role = user?.role;
-  const [isOpen, setIsOpen] = useState(false);
 
-  // 👇 NUEVO: controlar que el componente ya esté montado en el cliente
+  const [isOpen, setIsOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
 
+  // 馃憞 Evitar errores de hidrataci贸n (solo renderizar en cliente)
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // Mientras React no ha hidratado en el cliente, no renderizamos el navbar
-  if (!mounted) {
-    return null;
-  }
+  if (!mounted) return null;
+
+  // 馃憠 Cerrar men煤 cuando se hace click en alg煤n link
+  const handleMenuItemClick = () => {
+    setIsOpen(false);
+  };
+
+  // 馃憠 Logout que tambi茅n cierra el men煤
+  const handleLogout = () => {
+    logout();
+    setIsOpen(false);
+  };
 
   return (
     <nav className="w-full bg-white shadow-md fixed top-0 left-0 z-50 border-b border-gray-100">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-16">
         {/* Logo */}
-        <Link href="/" className="flex items-center gap-2">
+        <Link
+          href="/"
+          className="flex items-center gap-2"
+          onClick={handleMenuItemClick}
+        >
           <Image
             src="/logo-horizontal.svg"
             alt="CleenGo Logo"
@@ -52,7 +64,11 @@ export default function Navbar() {
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 strokeWidth={2}
-                d={isOpen ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16M4 18h16"}
+                d={
+                  isOpen
+                    ? "M6 18L18 6M6 6l12 12"
+                    : "M4 6h16M4 12h16M4 18h16"
+                }
               />
             </svg>
           </button>
@@ -66,71 +82,85 @@ export default function Navbar() {
               : "hidden"
           }`}
         >
-          {/* GUEST NAVBAR */}
+          {/* ------------------- */}
+          {/* GUEST NAVBAR       */}
+          {/* ------------------- */}
           {!user && (
             <div className="flex flex-col lg:flex-row lg:items-center lg:gap-6 gap-3 w-full">
               <Link
                 href="/client/home"
+                onClick={handleMenuItemClick}
                 className="text-gray-700 font-medium hover:text-teal-500 transition"
               >
                 Inicio
               </Link>
               <Link
                 href="/client/providers"
+                onClick={handleMenuItemClick}
                 className="text-gray-700 font-medium hover:text-teal-500 transition"
               >
                 Proveedores
               </Link>
               <Link
                 href="/suscripcion"
+                onClick={handleMenuItemClick}
                 className="text-gray-700 font-medium hover:text-teal-500 transition"
               >
-                Suscripción
+                Suscripci贸n
               </Link>
               <Link
                 href="/blog"
+                onClick={handleMenuItemClick}
                 className="text-gray-700 font-medium hover:text-teal-500 transition"
               >
                 Blog
               </Link>
               <Link
                 href="/login"
+                onClick={handleMenuItemClick}
                 className="bg-teal-500 text-white px-6 py-2.5 rounded-lg font-semibold hover:bg-teal-600 transition shadow-sm text-center"
               >
-                Iniciar Sesión
+                Iniciar Sesi贸n
               </Link>
             </div>
           )}
 
-          {/* CLIENT NAVBAR */}
+          {/* ------------------- */}
+          {/* CLIENT NAVBAR       */}
+          {/* ------------------- */}
           {user && role === "client" && (
             <div className="flex flex-col lg:flex-row lg:items-center lg:gap-6 gap-3 w-full">
               <Link
                 href="/client/home"
+                onClick={handleMenuItemClick}
                 className="text-gray-700 font-medium hover:text-teal-500 transition text-center"
               >
                 Inicio
               </Link>
               <Link
                 href="/client/providers"
+                onClick={handleMenuItemClick}
                 className="text-gray-700 font-medium hover:text-teal-500 transition text-center"
               >
                 Proveedores
               </Link>
               <Link
                 href="/suscripcion"
+                onClick={handleMenuItemClick}
                 className="text-gray-700 font-medium hover:text-teal-500 transition text-center"
               >
-                Suscripción
+                Suscripci贸n
               </Link>
               <Link
                 href="/blog"
+                onClick={handleMenuItemClick}
                 className="text-gray-700 font-medium hover:text-teal-500 transition text-center"
               >
                 Blog
               </Link>
               <Link
                 href="/client/appointments"
+                onClick={handleMenuItemClick}
                 className="relative text-gray-700 hover:text-teal-500 transition text-center"
               >
                 <svg
@@ -152,6 +182,7 @@ export default function Navbar() {
               </Link>
               <Link
                 href="/client/profile"
+                onClick={handleMenuItemClick}
                 className="text-gray-700 hover:text-teal-500 transition text-center"
               >
                 <svg
@@ -167,48 +198,54 @@ export default function Navbar() {
                 </svg>
               </Link>
               <span className="text-gray-700 font-medium text-center">
-                ¡Hola,{" "}
-                <span className="text-teal-500 font-semibold">{user.name}</span>
-                !
+                隆Hola,{" "}
+                <span className="text-teal-500 font-semibold">{user.name}</span>!
               </span>
               <button
-                onClick={logout}
+                onClick={handleLogout}
                 className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg font-medium hover:bg-gray-200 transition"
               >
-                Cerrar Sesión
+                Cerrar Sesi贸n
               </button>
             </div>
           )}
 
-          {/* PROVIDER NAVBAR */}
+          {/* ------------------- */}
+          {/* PROVIDER NAVBAR     */}
+          {/* ------------------- */}
           {user && role === "provider" && (
             <div className="flex flex-col lg:flex-row lg:items-center lg:gap-6 gap-3 w-full">
               <Link
                 href="/provider/dashboard"
+                onClick={handleMenuItemClick}
                 className="text-gray-700 font-medium hover:text-teal-500 transition text-center"
               >
                 Dashboard
               </Link>
               <Link
                 href="/client/providers"
+                onClick={handleMenuItemClick}
                 className="text-gray-700 font-medium hover:text-teal-500 transition text-center"
               >
                 Proveedores
               </Link>
               <Link
                 href="/suscripcion"
+                onClick={handleMenuItemClick}
                 className="text-gray-700 font-medium hover:text-teal-500 transition text-center"
               >
-                Suscripción
+                Suscripci贸n
               </Link>
               <Link
                 href="/blog"
+                onClick={handleMenuItemClick}
                 className="text-gray-700 font-medium hover:text-teal-500 transition text-center"
               >
                 Blog
               </Link>
               <Link
                 href="/provider/appointments"
+                onClick={handleMenuItemClick}
                 className="text-gray-700 hover:text-teal-500 transition text-center"
               >
                 <svg
@@ -227,6 +264,7 @@ export default function Navbar() {
               </Link>
               <Link
                 href="/provider/profile"
+                onClick={handleMenuItemClick}
                 className="text-gray-700 hover:text-teal-500 transition text-center"
               >
                 <svg
@@ -242,15 +280,14 @@ export default function Navbar() {
                 </svg>
               </Link>
               <span className="text-gray-700 font-medium text-center">
-                ¡Hola,{" "}
-                <span className="text-teal-500 font-semibold">{user.name}</span>
-                !
+                隆Hola,{" "}
+                <span className="text-teal-500 font-semibold">{user.name}</span>!
               </span>
               <button
-                onClick={logout}
+                onClick={handleLogout}
                 className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg font-medium hover:bg-gray-200 transition"
               >
-                Cerrar Sesión
+                Cerrar Sesi贸n
               </button>
             </div>
           )}
