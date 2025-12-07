@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" width="160" height="160">
+  <defs>
+    <linearGradient id="bloopOnly" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#8EDAF2"/>
+      <stop offset="100%" stop-color="#66C3E6"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Grupo general del icono con animación de "flotar" -->
+  <g transform="translate(10,10)">
+    <g>
+      <!-- Animación de flotación vertical -->
+      <animateTransform
+        attributeName="transform"
+        type="translate"
+        from="0 0"
+        to="0 -6"
+        dur="2.5s"
+        repeatCount="indefinite"
+        begin="0s"
+        direction="alternate"
+        values="0 0; 0 -6; 0 0"
+        keyTimes="0; 0.5; 1"
+      />
+
+      <!-- Burbuja principal -->
+      <circle cx="70" cy="70" r="56" fill="url(#bloopOnly)" stroke="#164A6B" stroke-width="8"/>
+
+      <!-- Brillo superior -->
+      <ellipse cx="92" cy="38" rx="14" ry="10" fill="#BFEAFB" opacity="0.85">
+        <!-- Parpadeo suave del brillo -->
+        <animate
+          attributeName="opacity"
+          values="0.85;0.4;0.85"
+          dur="2s"
+          repeatCount="indefinite"
+        />
+      </ellipse>
+
+      <!-- Ojos -->
+      <circle cx="54" cy="68" r="6.5" fill="#173A5F"/>
+      <circle cx="90" cy="68" r="6.5" fill="#173A5F"/>
+
+      <!-- Sonrisa -->
+      <path d="M50 88c12 12 32 12 44 0"
+            fill="none"
+            stroke="#173A5F"
+            stroke-width="7"
+            stroke-linecap="round">
+        <!-- Ligera animación de sonrisa (como si respirara) -->
+        <animate
+          attributeName="d"
+          dur="2.5s"
+          repeatCount="indefinite"
+          values="
+            M50 88c12 12 32 12 44 0;
+            M50 90c12 10 32 10 44 0;
+            M50 88c12 12 32 12 44 0
+          "
+        />
+      </path>
+
+      <!-- Burbujitas extra -->
+      <circle cx="126" cy="28" r="7" fill="#7EC8E3">
+        <animate
+          attributeName="r"
+          values="7;5;7"
+          dur="2s"
+          repeatCount="indefinite"
+        />
+      </circle>
+      <circle cx="114" cy="20" r="5" fill="#7EC8E3">
+        <animate
+          attributeName="r"
+          values="5;3;5"
+          dur="2s"
+          repeatCount="indefinite"
+        />
+      </circle>
+    </g>
+  </g>
+</svg>

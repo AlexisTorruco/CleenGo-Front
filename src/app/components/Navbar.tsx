@@ -2,19 +2,43 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/app/contexts/AuthContext";
 
 export default function Navbar() {
   const { user, logout } = useAuth();
   const role = user?.role;
+
   const [isOpen, setIsOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  // 👇 Evitar errores de hidratación (solo renderizar en cliente)
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) return null;
+
+  // 👉 Cerrar menú cuando se hace click en algún link
+  const handleMenuItemClick = () => {
+    setIsOpen(false);
+  };
+
+  // 👉 Logout que también cierra el menú
+  const handleLogout = () => {
+    logout();
+    setIsOpen(false);
+  };
 
   return (
     <nav className="w-full bg-white shadow-md fixed top-0 left-0 z-50 border-b border-gray-100">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-16">
         {/* Logo */}
-        <Link href="/" className="flex items-center gap-2">
+        <Link
+          href="/"
+          className="flex items-center gap-2"
+          onClick={handleMenuItemClick}
+        >
           <Image
             src="/logo-horizontal.svg"
             alt="CleenGo Logo"
@@ -65,30 +89,35 @@ export default function Navbar() {
             <div className="flex flex-col lg:flex-row lg:items-center lg:gap-6 gap-3 w-full">
               <Link
                 href="/client/home"
+                onClick={handleMenuItemClick}
                 className="text-gray-700 font-medium hover:text-teal-500 transition"
               >
                 Inicio
               </Link>
               <Link
                 href="/client/providers"
+                onClick={handleMenuItemClick}
                 className="text-gray-700 font-medium hover:text-teal-500 transition"
               >
                 Proveedores
               </Link>
               <Link
                 href="/suscripcion"
+                onClick={handleMenuItemClick}
                 className="text-gray-700 font-medium hover:text-teal-500 transition"
               >
                 Suscripción
               </Link>
               <Link
                 href="/blog"
+                onClick={handleMenuItemClick}
                 className="text-gray-700 font-medium hover:text-teal-500 transition"
               >
                 Blog
               </Link>
               <Link
                 href="/login"
+                onClick={handleMenuItemClick}
                 className="bg-teal-500 text-white px-6 py-2.5 rounded-lg font-semibold hover:bg-teal-600 transition shadow-sm text-center"
               >
                 Iniciar Sesión
@@ -97,36 +126,41 @@ export default function Navbar() {
           )}
 
           {/* ------------------- */}
-          {/* CLIENT NAVBAR      */}
+          {/* CLIENT NAVBAR       */}
           {/* ------------------- */}
           {user && role === "client" && (
             <div className="flex flex-col lg:flex-row lg:items-center lg:gap-6 gap-3 w-full">
               <Link
                 href="/client/home"
+                onClick={handleMenuItemClick}
                 className="text-gray-700 font-medium hover:text-teal-500 transition text-center"
               >
                 Inicio
               </Link>
               <Link
                 href="/client/providers"
+                onClick={handleMenuItemClick}
                 className="text-gray-700 font-medium hover:text-teal-500 transition text-center"
               >
                 Proveedores
               </Link>
               <Link
                 href="/suscripcion"
+                onClick={handleMenuItemClick}
                 className="text-gray-700 font-medium hover:text-teal-500 transition text-center"
               >
                 Suscripción
               </Link>
               <Link
                 href="/blog"
+                onClick={handleMenuItemClick}
                 className="text-gray-700 font-medium hover:text-teal-500 transition text-center"
               >
                 Blog
               </Link>
               <Link
                 href="/client/appointments"
+                onClick={handleMenuItemClick}
                 className="relative text-gray-700 hover:text-teal-500 transition text-center"
               >
                 <svg
@@ -148,6 +182,7 @@ export default function Navbar() {
               </Link>
               <Link
                 href="/client/profile"
+                onClick={handleMenuItemClick}
                 className="text-gray-700 hover:text-teal-500 transition text-center"
               >
                 <svg
@@ -167,7 +202,7 @@ export default function Navbar() {
                 <span className="text-teal-500 font-semibold">{user.name}</span>!
               </span>
               <button
-                onClick={logout}
+                onClick={handleLogout}
                 className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg font-medium hover:bg-gray-200 transition"
               >
                 Cerrar Sesión
@@ -176,36 +211,41 @@ export default function Navbar() {
           )}
 
           {/* ------------------- */}
-          {/* PROVIDER NAVBAR    */}
+          {/* PROVIDER NAVBAR     */}
           {/* ------------------- */}
           {user && role === "provider" && (
             <div className="flex flex-col lg:flex-row lg:items-center lg:gap-6 gap-3 w-full">
               <Link
                 href="/provider/dashboard"
+                onClick={handleMenuItemClick}
                 className="text-gray-700 font-medium hover:text-teal-500 transition text-center"
               >
                 Dashboard
               </Link>
               <Link
                 href="/client/providers"
+                onClick={handleMenuItemClick}
                 className="text-gray-700 font-medium hover:text-teal-500 transition text-center"
               >
                 Proveedores
               </Link>
               <Link
                 href="/suscripcion"
+                onClick={handleMenuItemClick}
                 className="text-gray-700 font-medium hover:text-teal-500 transition text-center"
               >
                 Suscripción
               </Link>
               <Link
                 href="/blog"
+                onClick={handleMenuItemClick}
                 className="text-gray-700 font-medium hover:text-teal-500 transition text-center"
               >
                 Blog
               </Link>
               <Link
                 href="/provider/appointments"
+                onClick={handleMenuItemClick}
                 className="text-gray-700 hover:text-teal-500 transition text-center"
               >
                 <svg
@@ -224,6 +264,7 @@ export default function Navbar() {
               </Link>
               <Link
                 href="/provider/profile"
+                onClick={handleMenuItemClick}
                 className="text-gray-700 hover:text-teal-500 transition text-center"
               >
                 <svg
@@ -243,7 +284,7 @@ export default function Navbar() {
                 <span className="text-teal-500 font-semibold">{user.name}</span>!
               </span>
               <button
-                onClick={logout}
+                onClick={handleLogout}
                 className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg font-medium hover:bg-gray-200 transition"
               >
                 Cerrar Sesión
