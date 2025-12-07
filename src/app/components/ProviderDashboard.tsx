@@ -1,7 +1,6 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import Image from 'next/image';
 import { useAuth } from '../contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
@@ -18,10 +17,13 @@ import {
   AlertCircle,
   Loader2,
   Briefcase,
+  MapPin,
+  Edit,
+  Award,
 } from 'lucide-react';
 
 // ============================================
-// INTERFACES - Todo en un solo archivo
+// INTERFACES
 // ============================================
 interface UserProfile {
   name: string;
@@ -29,6 +31,9 @@ interface UserProfile {
   birthDate: string;
   profileImgUrl: string;
   phone: string;
+  about?: string;
+  days?: string[];
+  hours?: string[];
 }
 
 interface Appointment {
@@ -70,28 +75,28 @@ export default function ProviderDashboard() {
     averageRating: 0,
   });
 
-  const fetchDashboardData = useCallback(async () => {
-    if (!user || !token) return;
+  const fetchData = useCallback(async () => {
+    if (!user?.id || !token) return;
 
     setLoading(true);
     setError(null);
 
     try {
-      // In Next.js client components, env variables are embedded at build time
-      const backendUrl = 'http://localhost:3000'; // Hardcoded for now
+      const backendUrl = 'http://localhost:3000';
 
-      console.log('🔍 Backend URL:', backendUrl); // Debug
+      console.log('📡 Fetching provider data for:', user.id);
 
-      // Fetch user profile
-      const profileResponse = await fetch(`${backendUrl}/user/profile/${user.id}`, {
+      // Fetch provider profile
+      const profileRes = await fetch(`${backendUrl}/provider/${user.id}`, {
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
+        cache: 'no-store',
       });
 
-      if (!profileResponse.ok) {
-        if (profileResponse.status === 401) {
+      if (!profileRes.ok) {
+        if (profileRes.status === 401) {
           logout();
           router.push('/login');
           return;
@@ -99,65 +104,67 @@ export default function ProviderDashboard() {
         throw new Error('Error al cargar el perfil');
       }
 
-      const profileData: UserProfile = await profileResponse.json();
+      const profileData = await profileRes.json();
+      console.log('👤 Profile data loaded:', profileData);
       setProfile(profileData);
 
-      // Fetch all appointments
-      const appointmentsResponse = await fetch(`${backendUrl}/appointments`, {
+      // Fetch appointments
+      const appointmentsRes = await fetch(`${backendUrl}/appointments`, {
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
+        cache: 'no-store',
       });
 
-      if (!appointmentsResponse.ok) {
-        throw new Error('Error al cargar los trabajos');
+      if (appointmentsRes.ok) {
+        const contentType = appointmentsRes.headers.get('content-type');
+        let allAppointments: Appointment[] = [];
+
+        if (contentType && contentType.includes('application/json')) {
+          const data = await appointmentsRes.json();
+          allAppointments = Array.isArray(data) ? data : data.appointments || [];
+        }
+
+        // Filter for this provider
+        const providerAppointments = allAppointments.filter((apt) => apt.providerId === user.id);
+        console.log('📅 Provider appointments:', providerAppointments.length);
+        setAppointments(providerAppointments);
+
+        // Calculate stats
+        const completed = providerAppointments.filter((apt) => apt.status === 'completed').length;
+        const upcoming = providerAppointments.filter(
+          (apt) => apt.status === 'scheduled' || apt.status === 'in-progress'
+        ).length;
+        const totalEarned = providerAppointments
+          .filter((apt) => apt.status === 'completed')
+          .reduce((sum, apt) => sum + (apt.cost || 0), 0);
+
+        const ratedAppointments = providerAppointments.filter(
+          (apt) => apt.rating && apt.status === 'completed'
+        );
+        const averageRating =
+          ratedAppointments.length > 0
+            ? ratedAppointments.reduce((sum, apt) => sum + (apt.rating || 0), 0) /
+              ratedAppointments.length
+            : 0;
+
+        setStats({
+          completedServices: completed,
+          upcomingServices: upcoming,
+          totalEarned,
+          averageRating: Math.round(averageRating * 10) / 10,
+        });
+
+        console.log('📊 Stats calculated:', {
+          completed,
+          upcoming,
+          totalEarned,
+          averageRating,
+        });
       }
-
-      // Check if response is JSON
-      const contentType = appointmentsResponse.headers.get('content-type');
-      let allAppointments: Appointment[] = [];
-
-      if (contentType && contentType.includes('application/json')) {
-        const data = await appointmentsResponse.json();
-        // Handle if data is an array or if it has an 'appointments' property
-        allAppointments = Array.isArray(data) ? data : data.appointments || [];
-      } else {
-        // Backend returned text (probably empty or "This action returns...")
-        console.log('Backend no tiene appointments aún');
-        allAppointments = [];
-      }
-
-      // Filter appointments for this provider
-      const providerAppointments = allAppointments.filter((apt) => apt.providerId === user.id);
-
-      setAppointments(providerAppointments);
-
-      // Calculate stats
-      const completed = providerAppointments.filter((apt) => apt.status === 'completed').length;
-      const upcoming = providerAppointments.filter((apt) => apt.status === 'scheduled').length;
-      const totalEarned = providerAppointments
-        .filter((apt) => apt.status === 'completed')
-        .reduce((sum, apt) => sum + (apt.cost || 0), 0);
-
-      // Calculate average rating
-      const ratedAppointments = providerAppointments.filter(
-        (apt) => apt.rating && apt.status === 'completed'
-      );
-      const averageRating =
-        ratedAppointments.length > 0
-          ? ratedAppointments.reduce((sum, apt) => sum + (apt.rating || 0), 0) /
-            ratedAppointments.length
-          : 0;
-
-      setStats({
-        completedServices: completed,
-        upcomingServices: upcoming,
-        totalEarned,
-        averageRating: Math.round(averageRating * 10) / 10,
-      });
     } catch (err) {
-      console.error('Error fetching dashboard data:', err);
+      console.error('❌ Error fetching data:', err);
       setError(err instanceof Error ? err.message : 'Error al cargar los datos');
     } finally {
       setLoading(false);
@@ -165,24 +172,40 @@ export default function ProviderDashboard() {
   }, [user, token, logout, router]);
 
   useEffect(() => {
+    console.log('🔍 ProviderDashboard - Checking auth...');
+    console.log('👤 User:', user);
+    console.log('🔑 Token:', token ? 'Exists ✅' : 'Missing ❌');
+
     if (!user || !token) {
+      console.log('❌ No user or token, redirecting to login');
       router.push('/login');
       return;
     }
 
     if (user.role !== 'provider') {
+      console.log('❌ Not a provider, redirecting to dashboard');
       router.push('/dashboard');
       return;
     }
 
-    fetchDashboardData();
-  }, [user, token, router, fetchDashboardData]);
+    console.log('✅ Auth OK, fetching data...');
+    fetchData();
+
+    // Reload on window focus
+    const handleFocus = () => {
+      console.log('👁️ Window focused - Reloading data...');
+      fetchData();
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [user, token, router, fetchData]);
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-linear-to-br from-purple-50 to-pink-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-emerald-50 flex items-center justify-center">
         <div className="text-center">
-          <Loader2 className="w-12 h-12 text-purple-600 animate-spin mx-auto mb-4" />
+          <Loader2 className="w-12 h-12 text-blue-600 animate-spin mx-auto mb-4" />
           <p className="text-gray-600">Cargando tu dashboard...</p>
         </div>
       </div>
@@ -191,130 +214,239 @@ export default function ProviderDashboard() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-linear-to-br from-purple-50 to-pink-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-emerald-50 flex items-center justify-center p-4">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full text-center"
+        >
           <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Error</h2>
           <p className="text-gray-600 mb-6">{error}</p>
           <button
-            onClick={fetchDashboardData}
-            className="bg-purple-600 text-white px-6 py-3 rounded-xl hover:bg-purple-700 transition-colors"
+            onClick={fetchData}
+            className="bg-gradient-to-r from-blue-600 to-cyan-600 text-white px-6 py-3 rounded-xl hover:shadow-lg transition-all"
           >
             Reintentar
           </button>
-        </div>
+        </motion.div>
       </div>
     );
   }
 
+  const statusConfig = {
+    completed: { bg: 'bg-emerald-100', text: 'text-emerald-700', label: 'Completado' },
+    scheduled: { bg: 'bg-blue-100', text: 'text-blue-700', label: 'Programado' },
+    'in-progress': { bg: 'bg-cyan-100', text: 'text-cyan-700', label: 'En Progreso' },
+    cancelled: { bg: 'bg-red-100', text: 'text-red-700', label: 'Cancelado' },
+  };
+
   return (
-    <div className="min-h-screen bg-linear-to-br from-purple-50 to-pink-50 py-8 px-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-cyan-50 to-emerald-50 pt-24 pb-12 px-4">
       <div className="max-w-7xl mx-auto">
+        {/* Animated Background Blobs */}
+        <div className="fixed inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-0 right-0 w-96 h-96 bg-blue-300/20 rounded-full blur-3xl animate-pulse"></div>
+          <div
+            className="absolute bottom-0 left-0 w-96 h-96 bg-emerald-300/20 rounded-full blur-3xl animate-pulse"
+            style={{ animationDelay: '1s' }}
+          ></div>
+          <div
+            className="absolute top-1/2 left-1/2 w-96 h-96 bg-cyan-300/20 rounded-full blur-3xl animate-pulse"
+            style={{ animationDelay: '2s' }}
+          ></div>
+        </div>
+
         {/* Header Section */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-3xl shadow-xl p-8 mb-8"
+          className="relative z-10 bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl border-2 border-white/50 overflow-hidden mb-8"
         >
-          <div className="flex flex-col md:flex-row items-center gap-6">
-            {/* Profile Image */}
-            <div className="relative">
-              {profile?.profileImgUrl ? (
-                <Image
-                  src={profile.profileImgUrl}
-                  alt="Foto de perfil"
-                  width={96}
-                  height={96}
-                  className="rounded-full object-cover border-4 border-purple-500"
-                />
-              ) : (
-                <div className="w-24 h-24 rounded-full bg-linear-to-br from-purple-500 to-pink-500 flex items-center justify-center border-4 border-purple-500">
-                  <User className="w-12 h-12 text-white" />
-                </div>
-              )}
-              <div className="absolute -bottom-2 -right-2 bg-pink-500 rounded-full p-2">
-                <Briefcase className="w-5 h-5 text-white" />
-              </div>
-            </div>
+          {/* Top gradient bar */}
+          <div className="h-2 bg-gradient-to-r from-blue-600 via-cyan-500 to-emerald-500"></div>
 
-            {/* Profile Info */}
-            <div className="flex-1 text-center md:text-left">
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                {profile?.name} {profile?.surname}
-              </h1>
-              <div className="flex flex-col md:flex-row gap-4 text-gray-600">
-                <div className="flex items-center justify-center md:justify-start gap-2">
-                  <Mail className="w-4 h-4" />
-                  <span>{user?.email}</span>
-                </div>
-                {profile?.phone && (
-                  <div className="flex items-center justify-center md:justify-start gap-2">
-                    <Phone className="w-4 h-4" />
-                    <span>{profile.phone}</span>
+          <div className="p-8">
+            <div className="flex flex-col md:flex-row items-center gap-6">
+              {/* Profile Image with glow */}
+              <div className="relative group">
+                <div className="absolute -inset-1 bg-gradient-to-r from-blue-500 via-cyan-500 to-emerald-500 rounded-full blur opacity-40 group-hover:opacity-75 transition-opacity"></div>
+                {profile?.profileImgUrl ? (
+                  <img
+                    src={profile.profileImgUrl}
+                    alt="Foto de perfil"
+                    className="relative w-24 h-24 rounded-full object-cover border-4 border-white"
+                  />
+                ) : (
+                  <div className="relative w-24 h-24 rounded-full bg-gradient-to-br from-blue-500 via-cyan-500 to-emerald-500 flex items-center justify-center border-4 border-white">
+                    <User className="w-12 h-12 text-white" />
                   </div>
                 )}
+                <div className="absolute -bottom-2 -right-2 bg-gradient-to-r from-emerald-500 to-green-500 rounded-full p-2 shadow-lg">
+                  <Briefcase className="w-5 h-5 text-white" />
+                </div>
+              </div>
+
+              {/* Profile Info */}
+              <div className="flex-1 text-center md:text-left">
+                <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 via-cyan-600 to-emerald-600 bg-clip-text text-transparent mb-3">
+                  {profile?.name} {profile?.surname}
+                </h1>
+                <div className="flex flex-col md:flex-row gap-4 text-gray-600 mb-4">
+                  <div className="flex items-center justify-center md:justify-start gap-2">
+                    <Mail className="w-4 h-4 text-blue-600" />
+                    <span>{user?.email}</span>
+                  </div>
+                  {profile?.phone && (
+                    <div className="flex items-center justify-center md:justify-start gap-2">
+                      <Phone className="w-4 h-4 text-cyan-600" />
+                      <span>{profile.phone}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* About */}
+                {profile?.about && (
+                  <p className="text-gray-600 text-sm bg-blue-50/50 rounded-xl p-4 border border-blue-100">
+                    {profile.about}
+                  </p>
+                )}
+              </div>
+
+              {/* Rating Badge & Edit Button */}
+              <div className="flex flex-col gap-3">
+                <div className="bg-gradient-to-br from-blue-500 via-cyan-500 to-emerald-500 rounded-2xl p-6 text-white text-center shadow-xl">
+                  <Award className="w-8 h-8 mx-auto mb-2" />
+                  <div className="text-3xl font-bold">
+                    {stats.averageRating > 0 ? stats.averageRating.toFixed(1) : 'N/A'}
+                  </div>
+                  <div className="text-sm opacity-90 flex items-center justify-center gap-1">
+                    <Star className="w-4 h-4 fill-white" />
+                    Rating
+                  </div>
+                </div>
+
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => router.push('/provider/edit-profile')}
+                  className="flex items-center gap-2 px-4 py-2 bg-white border-2 border-blue-200 text-blue-700 rounded-xl hover:bg-blue-50 transition-all font-semibold"
+                >
+                  <Edit className="w-4 h-4" />
+                  Editar
+                </motion.button>
               </div>
             </div>
 
-            {/* Rating Badge */}
-            <div className="bg-linear-to-br from-purple-500 to-pink-500 rounded-2xl p-6 text-white text-center">
-              <Star className="w-8 h-8 mx-auto mb-2 fill-white" />
-              <div className="text-2xl font-bold">
-                {stats.averageRating > 0 ? stats.averageRating.toFixed(1) : 'N/A'}
+            {/* Availability */}
+            {profile?.days && profile.days.length > 0 && (
+              <div className="mt-6 pt-6 border-t border-gray-200">
+                <div className="flex flex-wrap gap-4">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-5 h-5 text-blue-600" />
+                    <span className="font-semibold text-gray-700">Disponibilidad:</span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {profile.days.map((day) => (
+                      <span
+                        key={day}
+                        className="px-3 py-1 bg-gradient-to-r from-blue-100 to-cyan-100 text-blue-700 rounded-full text-sm font-medium"
+                      >
+                        {day}
+                      </span>
+                    ))}
+                  </div>
+                  {profile.hours && profile.hours.length > 0 && (
+                    <>
+                      <div className="flex items-center gap-2 ml-4">
+                        <Clock className="w-5 h-5 text-emerald-600" />
+                        <span className="font-semibold text-gray-700">Horario:</span>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {profile.hours.map((hour) => (
+                          <span
+                            key={hour}
+                            className="px-3 py-1 bg-gradient-to-r from-emerald-100 to-green-100 text-emerald-700 rounded-full text-sm font-medium"
+                          >
+                            {hour}
+                          </span>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
-              <div className="text-sm opacity-90">Calificación Promedio</div>
-            </div>
+            )}
           </div>
         </motion.div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="relative z-10 grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          {/* Total Earned */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="bg-white rounded-2xl shadow-lg p-6"
+            whileHover={{ y: -4 }}
+            className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-lg hover:shadow-2xl transition-all p-6 border-2 border-white/50 relative overflow-hidden group"
           >
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-purple-100 rounded-xl">
-                <DollarSign className="w-6 h-6 text-purple-600" />
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-cyan-500/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            <div className="relative z-10">
+              <div className="flex items-center justify-between mb-4">
+                <div className="p-3 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-lg">
+                  <DollarSign className="w-6 h-6 text-white" />
+                </div>
+                <TrendingUp className="w-5 h-5 text-gray-400" />
               </div>
-              <TrendingUp className="w-5 h-5 text-gray-400" />
+              <h3 className="text-gray-600 text-sm mb-1 font-semibold">Total Ganado</h3>
+              <p className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
+                ${stats.totalEarned?.toLocaleString() || 0}
+              </p>
             </div>
-            <h3 className="text-gray-600 text-sm mb-1">Total Ganado</h3>
-            <p className="text-3xl font-bold text-gray-900">
-              ${stats.totalEarned?.toLocaleString() || 0}
-            </p>
           </motion.div>
 
+          {/* Completed Services */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="bg-white rounded-2xl shadow-lg p-6"
+            whileHover={{ y: -4 }}
+            className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-lg hover:shadow-2xl transition-all p-6 border-2 border-white/50 relative overflow-hidden group"
           >
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-pink-100 rounded-xl">
-                <CheckCircle className="w-6 h-6 text-pink-600" />
+            <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-green-500/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            <div className="relative z-10">
+              <div className="flex items-center justify-between mb-4">
+                <div className="p-3 bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl shadow-lg">
+                  <CheckCircle className="w-6 h-6 text-white" />
+                </div>
               </div>
+              <h3 className="text-gray-600 text-sm mb-1 font-semibold">Trabajos Completados</h3>
+              <p className="text-3xl font-bold bg-gradient-to-r from-emerald-600 to-green-600 bg-clip-text text-transparent">
+                {stats.completedServices}
+              </p>
             </div>
-            <h3 className="text-gray-600 text-sm mb-1">Trabajos Completados</h3>
-            <p className="text-3xl font-bold text-gray-900">{stats.completedServices}</p>
           </motion.div>
 
+          {/* Upcoming Services */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
-            className="bg-white rounded-2xl shadow-lg p-6"
+            whileHover={{ y: -4 }}
+            className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-lg hover:shadow-2xl transition-all p-6 border-2 border-white/50 relative overflow-hidden group"
           >
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-amber-100 rounded-xl">
-                <Clock className="w-6 h-6 text-amber-600" />
+            <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/10 to-blue-500/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            <div className="relative z-10">
+              <div className="flex items-center justify-between mb-4">
+                <div className="p-3 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-xl shadow-lg">
+                  <Clock className="w-6 h-6 text-white" />
+                </div>
               </div>
+              <h3 className="text-gray-600 text-sm mb-1 font-semibold">Próximos Trabajos</h3>
+              <p className="text-3xl font-bold bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent">
+                {stats.upcomingServices}
+              </p>
             </div>
-            <h3 className="text-gray-600 text-sm mb-1">Próximos Trabajos</h3>
-            <p className="text-3xl font-bold text-gray-900">{stats.upcomingServices}</p>
           </motion.div>
         </div>
 
@@ -323,99 +455,103 @@ export default function ProviderDashboard() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
-          className="bg-white rounded-3xl shadow-xl p-8"
+          className="relative z-10 bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl border-2 border-white/50 p-8"
         >
+          {/* Section Header */}
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-              <Calendar className="w-6 h-6 text-purple-600" />
-              Mis Trabajos
+            <h2 className="text-3xl font-bold flex items-center gap-3">
+              <div className="p-3 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-xl">
+                <Calendar className="w-6 h-6 text-white" />
+              </div>
+              <span className="bg-gradient-to-r from-blue-600 via-cyan-600 to-emerald-600 bg-clip-text text-transparent">
+                Mis Trabajos
+              </span>
             </h2>
             {appointments.length > 0 && (
-              <span className="bg-purple-100 text-purple-700 px-4 py-2 rounded-full text-sm font-semibold">
+              <span className="bg-gradient-to-r from-blue-100 to-cyan-100 text-blue-700 px-5 py-2 rounded-full text-sm font-bold shadow-md">
                 {appointments.length} total
               </span>
             )}
           </div>
 
           {appointments.length === 0 ? (
-            <div className="text-center py-12">
-              <Briefcase className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">No tienes trabajos aún</h3>
-              <p className="text-gray-600 mb-6">Los clientes comenzarán a contactarte pronto</p>
+            <div className="text-center py-16">
+              <div className="relative inline-block mb-6">
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-200 to-cyan-200 rounded-full blur-xl opacity-50"></div>
+                <div className="relative p-6 bg-gradient-to-br from-blue-100 to-cyan-100 rounded-full">
+                  <Briefcase className="w-16 h-16 text-blue-600" />
+                </div>
+              </div>
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">No tienes trabajos aún</h3>
+              <p className="text-gray-600 text-lg">Los clientes comenzarán a contactarte pronto</p>
             </div>
           ) : (
             <div className="space-y-4">
-              {appointments.map((appointment) => (
-                <motion.div
-                  key={appointment.id}
-                  whileHover={{ scale: 1.01 }}
-                  className="border border-gray-200 rounded-2xl p-6 hover:shadow-lg transition-all"
-                >
-                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <span
-                          className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                            appointment.status === 'completed'
-                              ? 'bg-pink-100 text-pink-700'
-                              : appointment.status === 'scheduled'
-                              ? 'bg-purple-100 text-purple-700'
-                              : appointment.status === 'in-progress'
-                              ? 'bg-amber-100 text-amber-700'
-                              : 'bg-red-100 text-red-700'
-                          }`}
-                        >
-                          {appointment.status === 'completed'
-                            ? 'Completado'
-                            : appointment.status === 'scheduled'
-                            ? 'Programado'
-                            : appointment.status === 'in-progress'
-                            ? 'En Progreso'
-                            : 'Cancelado'}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2 text-gray-600 mb-1">
-                        <Calendar className="w-4 h-4" />
-                        <span>
-                          {new Date(appointment.date).toLocaleDateString('es-MX', {
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
-                        </span>
-                      </div>
-                      {appointment.address && (
-                        <p className="text-sm text-gray-500">{appointment.address}</p>
-                      )}
-                    </div>
-
-                    <div className="flex items-center gap-4">
-                      {appointment.rating && (
-                        <div className="flex items-center gap-1">
-                          <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
-                          <span className="font-semibold">{appointment.rating}</span>
+              {appointments.map((appointment) => {
+                const config = statusConfig[appointment.status];
+                return (
+                  <motion.div
+                    key={appointment.id}
+                    whileHover={{ scale: 1.01 }}
+                    className="bg-gradient-to-br from-gray-50 to-white border-2 border-gray-100 hover:border-blue-200 rounded-2xl p-6 hover:shadow-xl transition-all"
+                  >
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-3">
+                          <span
+                            className={`px-4 py-1.5 rounded-full text-sm font-bold ${config.bg} ${config.text} shadow-sm`}
+                          >
+                            {config.label}
+                          </span>
+                          {appointment.rating && (
+                            <div className="flex items-center gap-1 bg-yellow-50 px-3 py-1 rounded-full">
+                              <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
+                              <span className="font-bold text-yellow-700">
+                                {appointment.rating}
+                              </span>
+                            </div>
+                          )}
                         </div>
-                      )}
-                      <div className="text-right">
-                        <div className="text-2xl font-bold text-gray-900">
+
+                        <div className="flex items-center gap-2 text-gray-700 mb-2">
+                          <Calendar className="w-4 h-4 text-blue-600" />
+                          <span className="font-medium">
+                            {new Date(appointment.date).toLocaleDateString('es-MX', {
+                              year: 'numeric',
+                              month: 'long',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                          </span>
+                        </div>
+
+                        {appointment.address && (
+                          <div className="flex items-center gap-2 text-gray-600 text-sm">
+                            <MapPin className="w-4 h-4 text-emerald-600" />
+                            <span>{appointment.address}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-xl p-4 text-center border-2 border-blue-100">
+                        <div className="text-3xl font-bold text-blue-700">
                           ${appointment.cost.toLocaleString()}
                         </div>
-                        <div className="text-sm text-gray-500">MXN</div>
+                        <div className="text-sm text-blue-600 font-medium">MXN</div>
                       </div>
                     </div>
-                  </div>
 
-                  {appointment.review && (
-                    <div className="mt-4 pt-4 border-t border-gray-100">
-                      <p className="text-sm text-gray-600 italic">
-                        &quot;{appointment.review}&quot;
-                      </p>
-                    </div>
-                  )}
-                </motion.div>
-              ))}
+                    {appointment.review && (
+                      <div className="mt-4 pt-4 border-t-2 border-gray-100">
+                        <p className="text-gray-700 italic bg-gray-50 rounded-xl p-4">
+                          &quot;{appointment.review}&quot;
+                        </p>
+                      </div>
+                    )}
+                  </motion.div>
+                );
+              })}
             </div>
           )}
         </motion.div>
