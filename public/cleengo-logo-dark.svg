@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 540 180" width="540" height="180" role="img" aria-label="CleenGo logo dark">
+  <defs>
+    <linearGradient id="bloopGradDark" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#8EDAF2"/>
+      <stop offset="100%" stop-color="#66C3E6"/>
+    </linearGradient>
+  </defs>
+  <g transform="translate(20,20)">
+    <circle cx="70" cy="70" r="56" fill="url(#bloopGradDark)" stroke="#A3E4FF" stroke-width="8"/>
+    <ellipse cx="92" cy="38" rx="14" ry="10" fill="#D6F2FF" opacity="0.9"/>
+    <circle cx="54" cy="68" r="6.5" fill="#E6F0FF"/>
+    <circle cx="90" cy="68" r="6.5" fill="#E6F0FF"/>
+    <path d="M50 88c12 12 32 12 44 0" fill="none" stroke="#E6F0FF" stroke-width="7" stroke-linecap="round"/>
+    <circle cx="126" cy="28" r="7" fill="#BFEAFB"/>
+    <circle cx="114" cy="20" r="5" fill="#BFEAFB"/>
+  </g>
+  <g font-family="Poppins, Manrope, system-ui, -apple-system, Segoe UI, Roboto, sans-serif" font-weight="700" font-size="64">
+    <text x="170" y="110" fill="#D6E2FF">Cleen</text>
+    <text x="340" y="110" fill="#4DFFA3">Go</text>
+  </g>
+</svg>
