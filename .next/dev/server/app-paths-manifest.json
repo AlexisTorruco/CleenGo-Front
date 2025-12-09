@@ -1,5 +1,10 @@
 {
+  "/_not-found/page": "app/_not-found/page.js",
+  "/client/appointments/create/page": "app/client/appointments/create/page.js",
   "/client/home/page": "app/client/home/page.js",
+  "/client/profile/page": "app/client/profile/page.js",
   "/client/providers/page": "app/client/providers/page.js",
-  "/page": "app/page.js"
+  "/login/page": "app/login/page.js",
+  "/page": "app/page.js",
+  "/subscriptions/page": "app/subscriptions/page.js"
 }

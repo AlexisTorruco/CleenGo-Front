@@ -82,7 +82,7 @@ export default function Navbar() {
                 Proveedores
               </Link>
               <Link
-                href="/suscripcion"
+                href="/subscriptions"
                 onClick={handleMenuItemClick}
                 className="text-gray-700 font-medium hover:text-teal-500 transition"
               >
