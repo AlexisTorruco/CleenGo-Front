@@ -88,7 +88,7 @@ export default function Navbar() {
                 Proveedores
               </Link>
               <Link
-                href="/suscripcion"
+                href="/subscriptions"
                 onClick={handleMenuItemClick}
                 className="text-gray-700 font-medium hover:text-teal-500 transition"
               >
@@ -134,7 +134,7 @@ export default function Navbar() {
                 Proveedores
               </Link>
               <Link
-                href="/suscripcion"
+                href="/subscriptions"
                 onClick={handleMenuItemClick}
                 className="text-gray-700 font-medium hover:text-teal-500 transition text-center"
               >
@@ -217,7 +217,7 @@ export default function Navbar() {
                 Proveedores
               </Link>
               <Link
-                href="/suscripcion"
+                href="/subscriptions"
                 onClick={handleMenuItemClick}
                 className="text-gray-700 font-medium hover:text-teal-500 transition text-center"
               >

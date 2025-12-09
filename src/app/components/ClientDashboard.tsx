@@ -1,301 +1,384 @@
 'use client';
 
+import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import {
+  Calendar,
+  Clock,
+  Star,
   User,
   Mail,
   Phone,
-  CheckCircle,
-  DollarSign,
-  Clock,
-  Calendar,
-  TrendingUp,
-  Star,
-  Edit3,
-  Package,
+  MapPin,
+  Edit,
   Loader2,
+  AlertCircle,
+  CheckCircle,
+  XCircle,
+  Package,
+  TrendingUp,
   Award,
-  Zap,
+  Image as ImageIcon,
 } from 'lucide-react';
 
 // ============================================
 // INTERFACES
 // ============================================
-interface Appointment {
-  id: string;
-  status: 'completed' | 'scheduled' | 'in-progress' | 'cancelled';
-  cost: number;
-  date?: string;
-  rating?: number;
-  service?: { name: string };
-  provider?: { name: string };
-  [key: string]: unknown;
-}
-
 interface UserProfile {
   id: string;
   name: string;
   surname: string;
   email: string;
+  birthDate: string;
   profileImgUrl: string;
-  phone?: string;
-  [key: string]: unknown;
+  phone: string | null;
+  address: string | null;
+  city: string | null;
+  state: string | null;
+  country: string | null;
+  postalCode: string | null;
+  role: string;
+  isActive: boolean;
+  estimatedAppointments: any[];
+  myAppointments: any[];
+}
+
+interface Appointment {
+  id: string;
+  date: string;
+  cost: number;
+  status: 'completed' | 'scheduled' | 'in-progress' | 'cancelled' | 'pending';
+  clientId?: string;
+  providerId?: string;
+  serviceId?: string;
+  address?: string;
+  notes?: string;
+  rating?: number;
+  review?: string;
+}
+
+interface DashboardStats {
+  totalAppointments: number;
+  completedAppointments: number;
+  upcomingAppointments: number;
+  pendingAppointments: number;
 }
 
 // ============================================
 // COMPONENTE
 // ============================================
 export default function ClientDashboard() {
-  const { user, token } = useAuth();
+  const { user, token, logout } = useAuth();
   const router = useRouter();
 
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [stats, setStats] = useState({
-    totalSpent: 0,
-    completedServices: 0,
-    upcomingServices: 0,
-    averageRating: 0,
+
+  const [stats, setStats] = useState<DashboardStats>({
+    totalAppointments: 0,
+    completedAppointments: 0,
+    upcomingAppointments: 0,
+    pendingAppointments: 0,
   });
 
-  // ======================
-  // FUNCIÓN PARA CARGAR DATOS
-  // ======================
-  const fetchData = async () => {
-    if (!user?.id || !token) {
-      console.error('User or token not available');
-      return;
-    }
+  const fetchData = useCallback(async () => {
+    if (!user?.id || !token) return;
+
+    setLoading(true);
+    setError(null);
 
     try {
-      setLoading(true);
+      const backendUrl = 'http://localhost:3000';
 
-      // Fetch profile
-      const profileRes = await fetch(`http://localhost:3000/user/profile/${user.id}`, {
-        headers: { Authorization: `Bearer ${token}` },
+      console.log('📡 Fetching client data for:', user.id);
+
+      // Fetch user profile
+      const profileRes = await fetch(`${backendUrl}/user/profile/${user.id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        cache: 'no-store',
       });
+
+      if (!profileRes.ok) {
+        if (profileRes.status === 401) {
+          logout();
+          router.push('/login');
+          return;
+        }
+        throw new Error('Error al cargar el perfil');
+      }
+
       const profileData = await profileRes.json();
+      console.log('👤 Profile data loaded:', profileData);
       setProfile(profileData);
 
       // Fetch appointments
-      const appointmentsRes = await fetch(`http://localhost:3000/appointments`, {
-        headers: { Authorization: `Bearer ${token}` },
+      const appointmentsRes = await fetch(`${backendUrl}/appointments`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        cache: 'no-store',
       });
 
-      const contentType = appointmentsRes.headers.get('content-type');
-      let allAppointments: Appointment[] = [];
+      if (appointmentsRes.ok) {
+        const contentType = appointmentsRes.headers.get('content-type');
+        let allAppointments: Appointment[] = [];
 
-      if (contentType && contentType.includes('application/json')) {
-        const data = await appointmentsRes.json();
-        allAppointments = Array.isArray(data) ? data : data.appointments || [];
+        if (contentType && contentType.includes('application/json')) {
+          const data = await appointmentsRes.json();
+          allAppointments = Array.isArray(data) ? data : data.appointments || [];
+        }
+
+        // Filter for this client
+        const clientAppointments = allAppointments.filter((apt) => apt.clientId === user.id);
+        console.log('📅 Client appointments:', clientAppointments.length);
+
+        setAppointments(clientAppointments);
+
+        // Calculate stats
+        const completed = clientAppointments.filter((apt) => apt.status === 'completed').length;
+        const upcoming = clientAppointments.filter(
+          (apt) => apt.status === 'scheduled' || apt.status === 'in-progress'
+        ).length;
+        const pending = clientAppointments.filter((apt) => apt.status === 'pending').length;
+
+        setStats({
+          totalAppointments: clientAppointments.length,
+          completedAppointments: completed,
+          upcomingAppointments: upcoming,
+          pendingAppointments: pending,
+        });
+
+        console.log('📊 Stats calculated:', {
+          total: clientAppointments.length,
+          completed,
+          upcoming,
+          pending,
+        });
       }
-
-      const userAppointments = allAppointments.filter((apt) => apt.clientId === user.id);
-      setAppointments(userAppointments);
-
-      // Calculate stats
-      const completed = userAppointments.filter((a) => a.status === 'completed');
-      const upcoming = userAppointments.filter((a) => a.status === 'scheduled');
-      const total = completed.reduce((acc, curr) => acc + (curr.cost || 0), 0);
-
-      const ratedServices = completed.filter((a) => a.rating);
-      const avgRating =
-        ratedServices.length > 0
-          ? ratedServices.reduce((acc, curr) => acc + (curr.rating || 0), 0) / ratedServices.length
-          : 0;
-
-      setStats({
-        totalSpent: total,
-        completedServices: completed.length,
-        upcomingServices: upcoming.length,
-        averageRating: Math.round(avgRating * 10) / 10,
-      });
-    } catch (error) {
-      console.error('Error fetching data:', error);
+    } catch (err) {
+      console.error('❌ Error fetching data:', err);
+      setError(err instanceof Error ? err.message : 'Error al cargar los datos');
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, token, logout, router]);
 
-  // ======================
-  // EFFECT PARA CARGAR AL MONTAR
-  // ======================
   useEffect(() => {
+    console.log('🔍 ClientDashboard - Checking auth...');
+    console.log('👤 User:', user);
+    console.log('🔑 Token:', token ? 'Exists ✅' : 'Missing ❌');
+
     if (!user || !token) {
+      console.log('❌ No user or token, redirecting to login');
       router.push('/login');
       return;
     }
 
+    if (user.role !== 'client') {
+      console.log('❌ Not a client, redirecting to dashboard');
+      router.push('/dashboard');
+      return;
+    }
+
+    console.log('✅ Auth OK, fetching data...');
     fetchData();
 
-    // Recargar datos cuando la ventana vuelve a tener foco
+    // Reload on window focus
     const handleFocus = () => {
+      console.log('👁️ Window focused - Reloading data...');
       fetchData();
     };
 
     window.addEventListener('focus', handleFocus);
-
-    return () => {
-      window.removeEventListener('focus', handleFocus);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, token]);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [user, token, router, fetchData]);
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-emerald-50 flex items-center justify-center">
         <div className="text-center">
-          <Loader2 className="w-16 h-16 text-blue-600 animate-spin mx-auto mb-4" />
-          <p className="text-gray-600 text-lg font-medium">Cargando tu dashboard...</p>
+          <Loader2 className="w-12 h-12 text-blue-600 animate-spin mx-auto mb-4" />
+          <p className="text-gray-600">Cargando tu dashboard...</p>
         </div>
       </div>
     );
   }
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-cyan-50 pt-24 pb-12 px-4">
-      {/* Decorative background elements */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none opacity-30">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-blue-400 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-0 left-0 w-96 h-96 bg-cyan-400 rounded-full blur-3xl"></div>
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-emerald-50 flex items-center justify-center p-4">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full text-center"
+        >
+          <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Error</h2>
+          <p className="text-gray-600 mb-6">{error}</p>
+          <button
+            onClick={fetchData}
+            className="bg-gradient-to-r from-blue-600 to-cyan-600 text-white px-6 py-3 rounded-xl hover:shadow-lg transition-all"
+          >
+            Reintentar
+          </button>
+        </motion.div>
       </div>
+    );
+  }
 
-      <div className="max-w-7xl mx-auto relative z-10">
-        {/* ================= PROFILE HEADER ================= */}
+  const statusConfig = {
+    completed: { bg: 'bg-emerald-100', text: 'text-emerald-700', label: 'Completado', icon: CheckCircle },
+    scheduled: { bg: 'bg-blue-100', text: 'text-blue-700', label: 'Programado', icon: Calendar },
+    'in-progress': { bg: 'bg-cyan-100', text: 'text-cyan-700', label: 'En Progreso', icon: Clock },
+    cancelled: { bg: 'bg-red-100', text: 'text-red-700', label: 'Cancelado', icon: XCircle },
+    pending: { bg: 'bg-yellow-100', text: 'text-yellow-700', label: 'Pendiente', icon: Clock },
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-cyan-50 to-emerald-50 pt-24 pb-12 px-4">
+      <div className="max-w-7xl mx-auto">
+        {/* Animated Background Blobs */}
+        <div className="fixed inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-0 right-0 w-96 h-96 bg-blue-300/20 rounded-full blur-3xl animate-pulse"></div>
+          <div
+            className="absolute bottom-0 left-0 w-96 h-96 bg-emerald-300/20 rounded-full blur-3xl animate-pulse"
+            style={{ animationDelay: '1s' }}
+          ></div>
+          <div
+            className="absolute top-1/2 left-1/2 w-96 h-96 bg-cyan-300/20 rounded-full blur-3xl animate-pulse"
+            style={{ animationDelay: '2s' }}
+          ></div>
+        </div>
+
+        {/* Header Section */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-3xl shadow-lg border border-gray-100 overflow-hidden mb-8"
+          className="relative z-10 bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl border-2 border-white/50 overflow-hidden mb-8"
         >
-          {/* Blue header bar */}
-          <div className="h-2 bg-gradient-to-r from-blue-600 via-cyan-500 to-blue-600"></div>
+          {/* Top gradient bar */}
+          <div className="h-2 bg-gradient-to-r from-blue-600 via-cyan-500 to-emerald-500"></div>
 
           <div className="p-8">
-            <div className="flex flex-col lg:flex-row items-center gap-8">
-              {/* Profile Picture */}
-              <div className="relative">
-                <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 to-cyan-500 rounded-full blur opacity-40"></div>
+            <div className="flex flex-col md:flex-row items-center gap-6">
+              {/* Profile Image */}
+              <div className="relative group">
+                <div className="absolute -inset-1 bg-gradient-to-r from-blue-500 via-cyan-500 to-emerald-500 rounded-full blur opacity-40 group-hover:opacity-75 transition-opacity"></div>
                 {profile?.profileImgUrl ? (
                   <img
                     src={profile.profileImgUrl}
-                    alt="Perfil"
-                    className="relative w-32 h-32 rounded-full object-cover border-4 border-white shadow-xl"
+                    alt="Foto de perfil"
+                    className="relative w-24 h-24 rounded-full object-cover border-4 border-white"
                   />
                 ) : (
-                  <div className="relative w-32 h-32 rounded-full bg-gradient-to-br from-blue-600 to-cyan-500 flex items-center justify-center border-4 border-white shadow-xl">
-                    <User className="w-16 h-16 text-white" />
+                  <div className="relative w-24 h-24 rounded-full bg-gradient-to-br from-blue-500 via-cyan-500 to-emerald-500 flex items-center justify-center border-4 border-white">
+                    <User className="w-12 h-12 text-white" />
                   </div>
                 )}
-                <div className="absolute -bottom-2 -right-2 bg-emerald-500 rounded-full p-2.5 shadow-lg border-3 border-white">
-                  <CheckCircle className="w-6 h-6 text-white" />
+                <div className="absolute -bottom-2 -right-2 bg-gradient-to-r from-emerald-500 to-green-500 rounded-full p-2 shadow-lg">
+                  <Award className="w-5 h-5 text-white" />
                 </div>
               </div>
 
               {/* Profile Info */}
-              <div className="flex-1 text-center lg:text-left">
-                <h1 className="text-4xl font-bold text-gray-900 mb-3">
+              <div className="flex-1 text-center md:text-left">
+                <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 via-cyan-600 to-emerald-600 bg-clip-text text-transparent mb-3">
                   {profile?.name} {profile?.surname}
                 </h1>
-
-                <div className="space-y-2 mb-5">
-                  <div className="flex items-center gap-2 text-gray-600 justify-center lg:justify-start">
-                    <div className="p-1.5 bg-blue-100 rounded-lg">
-                      <Mail className="w-4 h-4 text-blue-600" />
-                    </div>
-                    <span className="font-medium">{user?.email}</span>
+                <div className="flex flex-col md:flex-row gap-4 text-gray-600 mb-4">
+                  <div className="flex items-center justify-center md:justify-start gap-2">
+                    <Mail className="w-4 h-4 text-blue-600" />
+                    <span>{profile?.email}</span>
                   </div>
                   {profile?.phone && (
-                    <div className="flex items-center gap-2 text-gray-600 justify-center lg:justify-start">
-                      <div className="p-1.5 bg-cyan-100 rounded-lg">
-                        <Phone className="w-4 h-4 text-cyan-600" />
-                      </div>
-                      <span className="font-medium">{profile.phone}</span>
+                    <div className="flex items-center justify-center md:justify-start gap-2">
+                      <Phone className="w-4 h-4 text-cyan-600" />
+                      <span>{profile.phone}</span>
                     </div>
                   )}
                 </div>
 
-                <motion.button
-                  whileHover={{ scale: 1.03 }}
-                  whileTap={{ scale: 0.97 }}
-                  onClick={() => router.push('/client/profile/edit')}
-                  className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-xl font-semibold hover:shadow-lg transition-all"
-                >
-                  <Edit3 className="w-4 h-4" />
-                  Editar Perfil
-                </motion.button>
+                {/* Address */}
+                {profile?.address && (
+                  <div className="flex items-center justify-center md:justify-start gap-2 text-gray-600 text-sm bg-blue-50/50 rounded-xl p-3 border border-blue-100">
+                    <MapPin className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                    <span>
+                      {profile.address}
+                      {profile.city && `, ${profile.city}`}
+                      {profile.state && `, ${profile.state}`}
+                      {profile.postalCode && ` ${profile.postalCode}`}
+                    </span>
+                  </div>
+                )}
               </div>
 
-              {/* Stats Badge */}
-              <div className="lg:ml-auto">
-                <div className="bg-gradient-to-br from-blue-600 to-cyan-600 rounded-2xl p-8 text-white text-center shadow-xl min-w-[200px] relative overflow-hidden">
-                  <div className="absolute inset-0 bg-white opacity-10"></div>
-                  <Award className="w-12 h-12 mx-auto mb-3 relative" />
-                  <div className="text-5xl font-bold mb-2 relative">{stats.completedServices}</div>
-                  <div className="text-sm opacity-90 font-medium relative">
-                    Servicios Realizados
-                  </div>
-                  {stats.averageRating > 0 && (
-                    <div className="mt-3 flex items-center justify-center gap-1 relative">
-                      <Star className="w-5 h-5 fill-yellow-300 text-yellow-300" />
-                      <span className="text-lg font-bold">{stats.averageRating}</span>
-                    </div>
-                  )}
-                </div>
+              {/* Edit Button */}
+              <div>
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => router.push('/client/edit-profile')}
+                  className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-xl hover:shadow-lg transition-all font-semibold"
+                >
+                  <Edit className="w-5 h-5" />
+                  Editar Perfil
+                </motion.button>
               </div>
             </div>
           </div>
         </motion.div>
 
-        {/* ================= STATS CARDS ================= */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          {/* Total Spent */}
+        {/* Stats Grid */}
+        <div className="relative z-10 grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          {/* Total Appointments */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
             whileHover={{ y: -4 }}
-            className="group relative"
+            className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-lg hover:shadow-2xl transition-all p-6 border-2 border-white/50 relative overflow-hidden group"
           >
-            <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl blur opacity-20 group-hover:opacity-30 transition-opacity"></div>
-            <div className="relative bg-white rounded-2xl shadow-lg border border-gray-100 p-6 hover:shadow-xl transition-all">
-              <div className="flex items-start justify-between mb-4">
-                <div className="p-4 bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl shadow-md">
-                  <DollarSign className="w-7 h-7 text-white" />
-                </div>
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <TrendingUp className="w-5 h-5 text-blue-600" />
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-cyan-500/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            <div className="relative z-10">
+              <div className="flex items-center justify-between mb-4">
+                <div className="p-3 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-xl shadow-lg">
+                  <Package className="w-6 h-6 text-white" />
                 </div>
               </div>
-              <p className="text-gray-500 text-sm font-semibold mb-2">Total Gastado</p>
-              <p className="text-4xl font-bold text-gray-900 mb-1">
-                ${stats.totalSpent.toLocaleString()}
+              <h3 className="text-gray-600 text-sm mb-1 font-semibold">Total de Citas</h3>
+              <p className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
+                {stats.totalAppointments}
               </p>
-              <p className="text-xs text-gray-500">En servicios completados</p>
             </div>
           </motion.div>
 
-          {/* Completed */}
+          {/* Pending */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
             whileHover={{ y: -4 }}
-            className="group relative"
+            className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-lg hover:shadow-2xl transition-all p-6 border-2 border-white/50 relative overflow-hidden group"
           >
-            <div className="absolute inset-0 bg-gradient-to-br from-emerald-500 to-green-600 rounded-2xl blur opacity-20 group-hover:opacity-30 transition-opacity"></div>
-            <div className="relative bg-white rounded-2xl shadow-lg border border-gray-100 p-6 hover:shadow-xl transition-all">
-              <div className="flex items-start justify-between mb-4">
-                <div className="p-4 bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl shadow-md">
-                  <CheckCircle className="w-7 h-7 text-white" />
+            <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/10 to-amber-500/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            <div className="relative z-10">
+              <div className="flex items-center justify-between mb-4">
+                <div className="p-3 bg-gradient-to-br from-yellow-500 to-amber-600 rounded-xl shadow-lg">
+                  <Clock className="w-6 h-6 text-white" />
                 </div>
               </div>
-              <p className="text-gray-500 text-sm font-semibold mb-2">Servicios Realizados</p>
-              <p className="text-4xl font-bold text-gray-900 mb-1">{stats.completedServices}</p>
-              <p className="text-xs text-gray-500">Limpiezas finalizadas</p>
+              <h3 className="text-gray-600 text-sm mb-1 font-semibold">Pendientes</h3>
+              <p className="text-3xl font-bold bg-gradient-to-r from-yellow-600 to-amber-600 bg-clip-text text-transparent">
+                {stats.pendingAppointments}
+              </p>
             </div>
           </motion.div>
 
@@ -305,161 +388,168 @@ export default function ClientDashboard() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
             whileHover={{ y: -4 }}
-            className="group relative"
+            className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-lg hover:shadow-2xl transition-all p-6 border-2 border-white/50 relative overflow-hidden group"
           >
-            <div className="absolute inset-0 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-2xl blur opacity-20 group-hover:opacity-30 transition-opacity"></div>
-            <div className="relative bg-white rounded-2xl shadow-lg border border-gray-100 p-6 hover:shadow-xl transition-all">
-              <div className="flex items-start justify-between mb-4">
-                <div className="p-4 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-xl shadow-md">
-                  <Clock className="w-7 h-7 text-white" />
+            <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/10 to-blue-500/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            <div className="relative z-10">
+              <div className="flex items-center justify-between mb-4">
+                <div className="p-3 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-xl shadow-lg">
+                  <TrendingUp className="w-6 h-6 text-white" />
                 </div>
               </div>
-              <p className="text-gray-500 text-sm font-semibold mb-2">Próximas Limpiezas</p>
-              <p className="text-4xl font-bold text-gray-900 mb-1">{stats.upcomingServices}</p>
-              <p className="text-xs text-gray-500">Programadas</p>
+              <h3 className="text-gray-600 text-sm mb-1 font-semibold">Próximas</h3>
+              <p className="text-3xl font-bold bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent">
+                {stats.upcomingAppointments}
+              </p>
+            </div>
+          </motion.div>
+
+          {/* Completed */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+            whileHover={{ y: -4 }}
+            className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-lg hover:shadow-2xl transition-all p-6 border-2 border-white/50 relative overflow-hidden group"
+          >
+            <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-green-500/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            <div className="relative z-10">
+              <div className="flex items-center justify-between mb-4">
+                <div className="p-3 bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl shadow-lg">
+                  <CheckCircle className="w-6 h-6 text-white" />
+                </div>
+              </div>
+              <h3 className="text-gray-600 text-sm mb-1 font-semibold">Completadas</h3>
+              <p className="text-3xl font-bold bg-gradient-to-r from-emerald-600 to-green-600 bg-clip-text text-transparent">
+                {stats.completedAppointments}
+              </p>
             </div>
           </motion.div>
         </div>
 
-        {/* ================= SERVICES SECTION ================= */}
+        {/* Appointments Section */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-          className="bg-white rounded-3xl shadow-lg border border-gray-100 overflow-hidden"
+          transition={{ delay: 0.5 }}
+          className="relative z-10 bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl border-2 border-white/50 p-8"
         >
-          {/* Header with gradient */}
-          <div className="bg-gradient-to-r from-blue-600 via-cyan-500 to-blue-600 px-8 py-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="p-3 bg-white/20 backdrop-blur-sm rounded-xl">
-                  <Calendar className="w-7 h-7 text-white" />
-                </div>
-                <h2 className="text-3xl font-bold text-white">Mis Servicios</h2>
+          {/* Section Header */}
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-3xl font-bold flex items-center gap-3">
+              <div className="p-3 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-xl">
+                <Calendar className="w-6 h-6 text-white" />
               </div>
-
-              {appointments.length > 0 && (
-                <span className="px-5 py-2 bg-white/20 backdrop-blur-sm text-white rounded-full text-sm font-bold">
-                  {appointments.length} total
-                </span>
-              )}
-            </div>
+              <span className="bg-gradient-to-r from-blue-600 via-cyan-600 to-emerald-600 bg-clip-text text-transparent">
+                Mis Citas
+              </span>
+            </h2>
+            {appointments.length > 0 && (
+              <span className="bg-gradient-to-r from-blue-100 to-cyan-100 text-blue-700 px-5 py-2 rounded-full text-sm font-bold shadow-md">
+                {appointments.length} total
+              </span>
+            )}
           </div>
 
-          <div className="p-8">
-            {/* Empty State */}
-            {appointments.length === 0 && (
-              <div className="text-center py-16">
-                <div className="relative inline-block mb-6">
-                  <div className="absolute inset-0 bg-blue-600 rounded-full blur opacity-20"></div>
-                  <div className="relative w-24 h-24 bg-gradient-to-br from-blue-600 to-cyan-500 rounded-full flex items-center justify-center shadow-lg">
-                    <Package className="w-12 h-12 text-white" />
-                  </div>
+          {appointments.length === 0 ? (
+            <div className="text-center py-16">
+              <div className="relative inline-block mb-6">
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-200 to-cyan-200 rounded-full blur-xl opacity-50"></div>
+                <div className="relative p-6 bg-gradient-to-br from-blue-100 to-cyan-100 rounded-full">
+                  <Calendar className="w-16 h-16 text-blue-600" />
                 </div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-3">No tienes servicios aún</h3>
-                <p className="text-gray-600 mb-8 max-w-md mx-auto text-lg">
-                  Agenda tu servicio en menos de 5 minutos. ¡Rápido y fácil!
-                </p>
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => router.push('/client/providers')}
-                  className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-xl font-bold hover:shadow-xl transition-all text-lg"
-                >
-                  <Zap className="w-5 h-5" />
-                  Explorar Proveedores
-                </motion.button>
               </div>
-            )}
-
-            {/* Services List */}
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">No tienes citas aún</h3>
+              <p className="text-gray-600 text-lg mb-6">
+                Agenda tu primera cita con un proveedor
+              </p>
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => router.push('/client/providers')}
+                className="px-8 py-3 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-xl hover:shadow-lg transition-all font-semibold"
+              >
+                Ver Proveedores
+              </motion.button>
+            </div>
+          ) : (
             <div className="space-y-4">
-              {appointments.map((appointment, index) => (
-                <motion.div
-                  key={appointment.id}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.1 }}
-                  whileHover={{ x: 4 }}
-                  className="relative group"
-                >
-                  <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-cyan-500/10 rounded-2xl blur-sm opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                  <div className="relative bg-gradient-to-br from-gray-50 to-white border-2 border-gray-100 rounded-2xl p-6 hover:shadow-lg hover:border-blue-200 transition-all">
+              {appointments.map((appointment) => {
+                const config = statusConfig[appointment.status];
+                const StatusIcon = config.icon;
+
+                return (
+                  <motion.div
+                    key={appointment.id}
+                    whileHover={{ scale: 1.01 }}
+                    className="bg-gradient-to-br from-gray-50 to-white border-2 border-gray-100 hover:border-blue-200 rounded-2xl p-6 hover:shadow-xl transition-all"
+                  >
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-3">
                           <span
-                            className={`px-4 py-1.5 rounded-full text-xs font-bold shadow-sm ${
-                              appointment.status === 'completed'
-                                ? 'bg-gradient-to-r from-emerald-500 to-green-500 text-white'
-                                : appointment.status === 'scheduled'
-                                ? 'bg-gradient-to-r from-blue-600 to-cyan-500 text-white'
-                                : appointment.status === 'in-progress'
-                                ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white'
-                                : 'bg-gradient-to-r from-red-500 to-pink-500 text-white'
-                            }`}
+                            className={`px-4 py-1.5 rounded-full text-sm font-bold ${config.bg} ${config.text} shadow-sm flex items-center gap-2`}
                           >
-                            {appointment.status === 'completed'
-                              ? '✓ Completado'
-                              : appointment.status === 'scheduled'
-                              ? '📅 Programado'
-                              : appointment.status === 'in-progress'
-                              ? '⏳ En Progreso'
-                              : '✗ Cancelado'}
+                            <StatusIcon className="w-4 h-4" />
+                            {config.label}
                           </span>
-
                           {appointment.rating && (
-                            <div className="flex items-center gap-1 bg-gradient-to-r from-yellow-400 to-amber-400 px-3 py-1.5 rounded-full shadow-sm">
-                              <Star className="w-4 h-4 fill-white text-white" />
-                              <span className="text-xs font-bold text-white">
+                            <div className="flex items-center gap-1 bg-yellow-50 px-3 py-1 rounded-full">
+                              <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
+                              <span className="font-bold text-yellow-700">
                                 {appointment.rating}
                               </span>
                             </div>
                           )}
                         </div>
 
-                        {appointment.service?.name && (
-                          <p className="font-bold text-gray-900 mb-2 text-lg">
-                            {appointment.service.name}
-                          </p>
-                        )}
-
-                        {appointment.date && (
-                          <div className="flex items-center gap-2 text-gray-600 text-sm mb-1">
-                            <Calendar className="w-4 h-4 text-blue-600" />
+                        <div className="flex items-center gap-2 text-gray-700 mb-2">
+                          <Calendar className="w-4 h-4 text-blue-600" />
+                          <span className="font-medium">
                             {new Date(appointment.date).toLocaleDateString('es-MX', {
-                              weekday: 'long',
                               year: 'numeric',
                               month: 'long',
                               day: 'numeric',
                               hour: '2-digit',
                               minute: '2-digit',
                             })}
+                          </span>
+                        </div>
+
+                        {appointment.address && (
+                          <div className="flex items-center gap-2 text-gray-600 text-sm">
+                            <MapPin className="w-4 h-4 text-emerald-600" />
+                            <span>{appointment.address}</span>
                           </div>
                         )}
 
-                        {appointment.provider?.name && (
-                          <p className="text-sm text-gray-500">
-                            Proveedor:{' '}
-                            <span className="font-semibold">{appointment.provider.name}</span>
-                          </p>
+                        {appointment.notes && (
+                          <div className="mt-2 text-sm text-gray-600 bg-gray-50 rounded-lg p-3">
+                            <strong>Notas:</strong> {appointment.notes}
+                          </div>
                         )}
                       </div>
 
-                      <div className="flex items-center gap-4">
-                        <div className="text-right bg-gradient-to-br from-blue-50 to-cyan-50 px-6 py-4 rounded-xl">
-                          <p className="text-3xl font-bold text-blue-600">
-                            ${appointment.cost.toLocaleString()}
-                          </p>
-                          <p className="text-xs text-gray-600 font-semibold">MXN</p>
+                      <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-xl p-4 text-center border-2 border-blue-100">
+                        <div className="text-3xl font-bold text-blue-700">
+                          ${appointment.cost.toLocaleString()}
                         </div>
+                        <div className="text-sm text-blue-600 font-medium">MXN</div>
                       </div>
                     </div>
-                  </div>
-                </motion.div>
-              ))}
+
+                    {appointment.review && (
+                      <div className="mt-4 pt-4 border-t-2 border-gray-100">
+                        <p className="text-gray-700 italic bg-gray-50 rounded-xl p-4">
+                          &quot;{appointment.review}&quot;
+                        </p>
+                      </div>
+                    )}
+                  </motion.div>
+                );
+              })}
             </div>
-          </div>
+          )}
         </motion.div>
       </div>
     </div>
