@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useAuth } from '@/app/contexts/AuthContext';
 
 export default function Navbar() {
@@ -10,14 +10,6 @@ export default function Navbar() {
   const role = user?.role;
 
   const [isOpen, setIsOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
-
-  // 👇 Evitar errores de hidratación (solo renderizar en cliente)
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!mounted) return null;
 
   // 👉 Cerrar menú cuando se hace click en algún link
   const handleMenuItemClick = () => {
