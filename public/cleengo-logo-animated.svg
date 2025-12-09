@@ -1,0 +1,98 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 640 180"
+     width="640"
+     height="180"
+     role="img"
+     aria-label="CleenGo logo animado">
+
+  <defs>
+    <linearGradient id="bloopGradFull" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#8EDAF2"/>
+      <stop offset="100%" stop-color="#66C3E6"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Ícono Bloop con animación de flotación -->
+  <g id="icon-group">
+    <g>
+      <!-- Animación de flotación (sube y baja) -->
+      <animateTransform
+        attributeName="transform"
+        type="translate"
+        dur="2.5s"
+        repeatCount="indefinite"
+        values="20 20; 20 14; 20 20"
+        keyTimes="0; 0.5; 1"
+      />
+
+      <circle cx="60" cy="60" r="56" fill="url(#bloopGradFull)" stroke="#164A6B" stroke-width="8"/>
+      <ellipse cx="82" cy="28" rx="14" ry="10" fill="#BFEAFB" opacity="0.85">
+        <!-- Brillo respirando -->
+        <animate
+          attributeName="opacity"
+          values="0.85;0.4;0.85"
+          dur="2s"
+          repeatCount="indefinite"
+        />
+      </ellipse>
+
+      <circle cx="44" cy="58" r="6.5" fill="#173A5F"/>
+      <circle cx="80" cy="58" r="6.5" fill="#173A5F"/>
+
+      <path d="M40 78c12 12 32 12 44 0"
+            fill="none"
+            stroke="#173A5F"
+            stroke-width="7"
+            stroke-linecap="round">
+        <!-- Sonrisa que cambia muy poquito -->
+        <animate
+          attributeName="d"
+          dur="2.5s"
+          repeatCount="indefinite"
+          values="
+            M40 78c12 12 32 12 44 0;
+            M40 80c12 10 32 10 44 0;
+            M40 78c12 12 32 12 44 0
+          "
+        />
+      </path>
+
+      <circle cx="116" cy="18" r="7" fill="#7EC8E3">
+        <animate
+          attributeName="r"
+          values="7;5;7"
+          dur="2s"
+          repeatCount="indefinite"
+        />
+      </circle>
+      <circle cx="104" cy="10" r="5" fill="#7EC8E3">
+        <animate
+          attributeName="r"
+          values="5;3;5"
+          dur="2s"
+          repeatCount="indefinite"
+        />
+      </circle>
+    </g>
+  </g>
+
+  <!-- Texto CleenGo a la derecha -->
+  <g font-family="Poppins, Manrope, system-ui, -apple-system, Segoe UI, Roboto, sans-serif"
+     font-weight="700"
+     font-size="72">
+
+    <text x="190" y="115">
+      <tspan fill="#1E3A5F">Cleen</tspan>
+      <tspan id="go-part" fill="#3DCC76" dx="-16">Go
+        <!-- "Latido" suave del Go -->
+        <animate
+          attributeName="fill"
+          values="#3DCC76;#2EBF65;#3DCC76"
+          dur="2s"
+          repeatCount="indefinite"
+        />
+      </tspan>
+    </text>
+
+  </g>
+</svg>

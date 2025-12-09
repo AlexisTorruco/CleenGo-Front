@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" width="160" height="160" role="img" aria-label="CleenGo Bloop">
+  <defs>
+    <linearGradient id="bloopGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#8EDAF2"/>
+      <stop offset="100%" stop-color="#66C3E6"/>
+    </linearGradient>
+  </defs>
+  <circle cx="80" cy="80" r="56" fill="url(#bloopGrad)" stroke="#164A6B" stroke-width="8" />
+  <ellipse cx="102" cy="48" rx="14" ry="10" fill="#BFEAFB" opacity="0.85"/>
+  <circle cx="62" cy="78" r="6.5" fill="#173A5F"/>
+  <circle cx="98" cy="78" r="6.5" fill="#173A5F"/>
+  <path d="M58 98c12 12 32 12 44 0" fill="none" stroke="#173A5F" stroke-width="7" stroke-linecap="round"/>
+  <circle cx="120" cy="38" r="7" fill="#7EC8E3"/>
+  <circle cx="108" cy="30" r="5" fill="#7EC8E3"/>
+</svg>
