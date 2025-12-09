@@ -41,8 +41,8 @@ interface UserProfile {
   postalCode: string | null;
   role: string;
   isActive: boolean;
-  estimatedAppointments: any[];
-  myAppointments: any[];
+  estimatedAppointments: Appointment[];
+  myAppointments: Appointment[];
 }
 
 interface Appointment {
@@ -235,7 +235,12 @@ export default function ClientDashboard() {
   }
 
   const statusConfig = {
-    completed: { bg: 'bg-emerald-100', text: 'text-emerald-700', label: 'Completado', icon: CheckCircle },
+    completed: {
+      bg: 'bg-emerald-100',
+      text: 'text-emerald-700',
+      label: 'Completado',
+      icon: CheckCircle,
+    },
     scheduled: { bg: 'bg-blue-100', text: 'text-blue-700', label: 'Programado', icon: Calendar },
     'in-progress': { bg: 'bg-cyan-100', text: 'text-cyan-700', label: 'En Progreso', icon: Clock },
     cancelled: { bg: 'bg-red-100', text: 'text-red-700', label: 'Cancelado', icon: XCircle },
@@ -460,9 +465,7 @@ export default function ClientDashboard() {
                 </div>
               </div>
               <h3 className="text-2xl font-bold text-gray-900 mb-2">No tienes citas aún</h3>
-              <p className="text-gray-600 text-lg mb-6">
-                Agenda tu primera cita con un proveedor
-              </p>
+              <p className="text-gray-600 text-lg mb-6">Agenda tu primera cita con un proveedor</p>
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}

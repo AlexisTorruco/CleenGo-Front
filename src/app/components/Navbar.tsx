@@ -11,22 +11,19 @@ export default function Navbar() {
 
   const [isOpen, setIsOpen] = useState(false);
 
-  // 👉 Cerrar menú cuando se hace click en algún link
+  // Cerrar menú cuando se hace click en algún link
   const handleMenuItemClick = () => {
     setIsOpen(false);
   };
 
-  // 👉 Logout que también cierra el menú
+  // Logout que también cierra el menú
   const handleLogout = () => {
     logout();
     setIsOpen(false);
   };
 
   return (
-    <nav
-      className="w-full bg-white shadow-md fixed top-0 left-0 z-50 border-b border-gray-100"
-      suppressHydrationWarning
-    >
+    <nav className="w-full bg-white shadow-md fixed top-0 left-0 z-50 border-b border-gray-100">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-16">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2" onClick={handleMenuItemClick}>
@@ -62,17 +59,14 @@ export default function Navbar() {
           className={`lg:flex lg:items-center lg:gap-6 ${
             isOpen
               ? 'flex flex-col w-full mt-4 space-y-4 bg-white p-4 rounded-lg shadow-lg absolute top-16 left-0 lg:static lg:shadow-none lg:p-0'
-              : 'hidden'
+              : 'hidden lg:flex'
           }`}
         >
           {/* ------------------- */}
           {/* GUEST NAVBAR       */}
           {/* ------------------- */}
           {!user && (
-            <div
-              suppressHydrationWarning
-              className="flex flex-col lg:flex-row lg:items-center lg:gap-6 gap-3 w-full"
-            >
+            <div className="flex flex-col lg:flex-row lg:items-center lg:gap-6 gap-3 w-full">
               <Link
                 href="/client/home"
                 onClick={handleMenuItemClick}
@@ -88,7 +82,7 @@ export default function Navbar() {
                 Proveedores
               </Link>
               <Link
-                href="/subscriptions"
+                href="/suscripcion"
                 onClick={handleMenuItemClick}
                 className="text-gray-700 font-medium hover:text-teal-500 transition"
               >
@@ -115,10 +109,7 @@ export default function Navbar() {
           {/* CLIENT NAVBAR       */}
           {/* ------------------- */}
           {user && role === 'client' && (
-            <div
-              suppressHydrationWarning
-              className="flex flex-col lg:flex-row lg:items-center lg:gap-6 gap-3 w-full"
-            >
+            <div className="flex flex-col lg:flex-row lg:items-center lg:gap-6 gap-3 w-full">
               <Link
                 href="/client/home"
                 onClick={handleMenuItemClick}
@@ -133,13 +124,7 @@ export default function Navbar() {
               >
                 Proveedores
               </Link>
-              <Link
-                href="/subscriptions"
-                onClick={handleMenuItemClick}
-                className="text-gray-700 font-medium hover:text-teal-500 transition text-center"
-              >
-                Suscripción
-              </Link>
+
               <Link
                 href="/blog"
                 onClick={handleMenuItemClick}
@@ -198,16 +183,13 @@ export default function Navbar() {
           {/* PROVIDER NAVBAR     */}
           {/* ------------------- */}
           {user && role === 'provider' && (
-            <div
-              suppressHydrationWarning
-              className="flex flex-col lg:flex-row lg:items-center lg:gap-6 gap-3 w-full"
-            >
+            <div className="flex flex-col lg:flex-row lg:items-center lg:gap-6 gap-3 w-full">
               <Link
-                href="/provider/dashboard"
+                href="/client/home"
                 onClick={handleMenuItemClick}
                 className="text-gray-700 font-medium hover:text-teal-500 transition text-center"
               >
-                Dashboard
+                Inicio
               </Link>
               <Link
                 href="/client/providers"
@@ -269,7 +251,7 @@ export default function Navbar() {
                 onClick={handleLogout}
                 className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg font-medium hover:bg-gray-200 transition"
               >
-                Cerrar Sesión
+                Cerrar sesión
               </button>
             </div>
           )}
