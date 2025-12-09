@@ -259,12 +259,22 @@ export default function EditProfile() {
         surname: string;
         phone: string;
         birthDate: string;
+        address?: string | null;
+        city?: string | null;
+        state?: string | null;
+        country?: string | null;
+        postalCode?: string | null;
         profileImgUrl?: string;
       } = {
         name: formData.name,
         surname: formData.surname,
         phone: formData.phone,
         birthDate: formData.birthDate,
+        address: formData.address || null,
+        city: formData.city || null,
+        state: formData.state || null,
+        country: formData.country || null,
+        postalCode: formData.postalCode || null,
       };
 
       // Solo agregar profileImgUrl si no está vacío
