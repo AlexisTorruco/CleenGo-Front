@@ -34,9 +34,14 @@ interface UserProfile {
   birthDate: string;
   profileImgUrl: string;
   phone: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  postalCode?: string;
   about?: string;
-  days?: string[];
-  hours?: string[];
+  days?: string[]; // ← Agregar esta
+  hours?: string[]; // ← Agregar esta
 }
 
 interface Appointment {
