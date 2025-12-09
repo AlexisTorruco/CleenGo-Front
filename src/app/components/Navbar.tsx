@@ -1,9 +1,9 @@
-"use client";
+'use client';
 
-import Link from "next/link";
-import Image from "next/image";
-import { useState } from "react";
-import { useAuth } from "@/app/contexts/AuthContext";
+import Link from 'next/link';
+import Image from 'next/image';
+import { useState } from 'react';
+import { useAuth } from '@/app/contexts/AuthContext';
 
 export default function Navbar() {
   const { user, logout } = useAuth();
@@ -30,21 +30,12 @@ export default function Navbar() {
             onClick={() => setIsOpen(!isOpen)}
             className="text-gray-700 hover:text-teal-500 focus:outline-none"
           >
-            <svg
-              className="w-6 h-6"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 strokeWidth={2}
-                d={
-                  isOpen
-                    ? "M6 18L18 6M6 6l12 12"
-                    : "M4 6h16M4 12h16M4 18h16"
-                }
+                d={isOpen ? 'M6 18L18 6M6 6l12 12' : 'M4 6h16M4 12h16M4 18h16'}
               />
             </svg>
           </button>
@@ -52,10 +43,11 @@ export default function Navbar() {
 
         {/* Menu */}
         <div
+          suppressHydrationWarning
           className={`lg:flex lg:items-center lg:gap-6 ${
             isOpen
-              ? "flex flex-col w-full mt-4 space-y-4 bg-white p-4 rounded-lg shadow-lg absolute top-16 left-0 lg:static lg:shadow-none lg:p-0"
-              : "hidden"
+              ? 'flex flex-col w-full mt-4 space-y-4 bg-white p-4 rounded-lg shadow-lg absolute top-16 left-0 lg:static lg:shadow-none lg:p-0'
+              : 'hidden lg:flex'
           }`}
         >
           {/* ------------------- */}
@@ -65,25 +57,25 @@ export default function Navbar() {
             <div className="flex flex-col lg:flex-row lg:items-center lg:gap-6 gap-3 w-full">
               <Link
                 href="/client/home"
-                className="text-gray-700 font-medium hover:text-teal-500 transition"
+                className="text-gray-700 font-medium hover:text-teal-500 transition text-center lg:text-left"
               >
                 Inicio
               </Link>
               <Link
                 href="/client/providers"
-                className="text-gray-700 font-medium hover:text-teal-500 transition"
+                className="text-gray-700 font-medium hover:text-teal-500 transition text-center lg:text-left"
               >
                 Proveedores
               </Link>
               <Link
                 href="/suscripcion"
-                className="text-gray-700 font-medium hover:text-teal-500 transition"
+                className="text-gray-700 font-medium hover:text-teal-500 transition text-center lg:text-left"
               >
                 Suscripción
               </Link>
               <Link
                 href="/blog"
-                className="text-gray-700 font-medium hover:text-teal-500 transition"
+                className="text-gray-700 font-medium hover:text-teal-500 transition text-center lg:text-left"
               >
                 Blog
               </Link>
@@ -99,7 +91,7 @@ export default function Navbar() {
           {/* ------------------- */}
           {/* CLIENT NAVBAR      */}
           {/* ------------------- */}
-          {user && role === "client" && (
+          {user && role === 'client' && (
             <div className="flex flex-col lg:flex-row lg:items-center lg:gap-6 gap-3 w-full">
               <Link
                 href="/client/home"
@@ -150,11 +142,7 @@ export default function Navbar() {
                 href="/client/profile"
                 className="text-gray-700 hover:text-teal-500 transition text-center"
               >
-                <svg
-                  className="w-6 h-6 mx-auto"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
+                <svg className="w-6 h-6 mx-auto" fill="currentColor" viewBox="0 0 20 20">
                   <path
                     fillRule="evenodd"
                     d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
@@ -163,8 +151,7 @@ export default function Navbar() {
                 </svg>
               </Link>
               <span className="text-gray-700 font-medium text-center">
-                ¡Hola,{" "}
-                <span className="text-teal-500 font-semibold">{user.name}</span>!
+                ¡Hola, <span className="text-teal-500 font-semibold">{user.name}</span>!
               </span>
               <button
                 onClick={logout}
@@ -178,7 +165,7 @@ export default function Navbar() {
           {/* ------------------- */}
           {/* PROVIDER NAVBAR    */}
           {/* ------------------- */}
-          {user && role === "provider" && (
+          {user && role === 'provider' && (
             <div className="flex flex-col lg:flex-row lg:items-center lg:gap-6 gap-3 w-full">
               <Link
                 href="/provider/dashboard"
@@ -226,11 +213,7 @@ export default function Navbar() {
                 href="/provider/profile"
                 className="text-gray-700 hover:text-teal-500 transition text-center"
               >
-                <svg
-                  className="w-6 h-6 mx-auto"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
+                <svg className="w-6 h-6 mx-auto" fill="currentColor" viewBox="0 0 20 20">
                   <path
                     fillRule="evenodd"
                     d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
@@ -239,8 +222,7 @@ export default function Navbar() {
                 </svg>
               </Link>
               <span className="text-gray-700 font-medium text-center">
-                ¡Hola,{" "}
-                <span className="text-teal-500 font-semibold">{user.name}</span>!
+                ¡Hola, <span className="text-teal-500 font-semibold">{user.name}</span>!
               </span>
               <button
                 onClick={logout}
