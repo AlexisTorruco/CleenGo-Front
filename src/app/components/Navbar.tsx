@@ -11,12 +11,12 @@ export default function Navbar() {
 
   const [isOpen, setIsOpen] = useState(false);
 
-  // 👉 Cerrar menú cuando se hace click en algún link
+  // Cerrar menú cuando se hace click en algún link
   const handleMenuItemClick = () => {
     setIsOpen(false);
   };
 
-  // 👉 Logout que también cierra el menú
+  // Logout que también cierra el menú
   const handleLogout = () => {
     logout();
     setIsOpen(false);
@@ -124,13 +124,7 @@ export default function Navbar() {
               >
                 Proveedores
               </Link>
-              <Link
-                href="/suscripcion"
-                onClick={handleMenuItemClick}
-                className="text-gray-700 font-medium hover:text-teal-500 transition text-center"
-              >
-                Suscripción
-              </Link>
+
               <Link
                 href="/blog"
                 onClick={handleMenuItemClick}
@@ -191,11 +185,11 @@ export default function Navbar() {
           {user && role === 'provider' && (
             <div className="flex flex-col lg:flex-row lg:items-center lg:gap-6 gap-3 w-full">
               <Link
-                href="/provider/dashboard"
+                href="/client/home"
                 onClick={handleMenuItemClick}
                 className="text-gray-700 font-medium hover:text-teal-500 transition text-center"
               >
-                Dashboard
+                Inicio
               </Link>
               <Link
                 href="/client/providers"
@@ -205,7 +199,7 @@ export default function Navbar() {
                 Proveedores
               </Link>
               <Link
-                href="/suscripcion"
+                href="/subscriptions"
                 onClick={handleMenuItemClick}
                 className="text-gray-700 font-medium hover:text-teal-500 transition text-center"
               >
@@ -257,7 +251,7 @@ export default function Navbar() {
                 onClick={handleLogout}
                 className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg font-medium hover:bg-gray-200 transition"
               >
-                Cerrar Sesión
+                Cerrar sesión
               </button>
             </div>
           )}

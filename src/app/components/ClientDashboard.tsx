@@ -313,38 +313,14 @@ export default function ClientDashboard() {
 
                 {/* Address */}
                 {profile?.address && (
-                  <div className="flex items-start gap-3 text-gray-600 text-sm bg-blue-50/50 rounded-xl p-4 border border-blue-100">
-                    <MapPin className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
-                    <div className="flex flex-col gap-2 text-left">
-                      <div>
-                        <span className="font-semibold text-gray-700">Dirección: </span>
-                        <span>{profile.address}</span>
-                      </div>
-                      {profile.city && (
-                        <div>
-                          <span className="font-semibold text-gray-700">Ciudad: </span>
-                          <span>{profile.city}</span>
-                        </div>
-                      )}
-                      {profile.state && (
-                        <div>
-                          <span className="font-semibold text-gray-700">Estado: </span>
-                          <span>{profile.state}</span>
-                        </div>
-                      )}
-                      {profile.country && (
-                        <div>
-                          <span className="font-semibold text-gray-700">País: </span>
-                          <span>{profile.country}</span>
-                        </div>
-                      )}
-                      {profile.postalCode && (
-                        <div>
-                          <span className="font-semibold text-gray-700">Código Postal: </span>
-                          <span>{profile.postalCode}</span>
-                        </div>
-                      )}
-                    </div>
+                  <div className="flex items-center justify-center md:justify-start gap-2 text-gray-600 text-sm bg-blue-50/50 rounded-xl p-3 border border-blue-100">
+                    <MapPin className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                    <span>
+                      {profile.address}
+                      {profile.city && `, ${profile.city}`}
+                      {profile.state && `, ${profile.state}`}
+                      {profile.postalCode && ` ${profile.postalCode}`}
+                    </span>
                   </div>
                 )}
               </div>
@@ -354,7 +330,7 @@ export default function ClientDashboard() {
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  onClick={() => router.push('/client/profile/edit')}
+                  onClick={() => router.push('/client/edit-profile')}
                   className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-xl hover:shadow-lg transition-all font-semibold"
                 >
                   <Edit className="w-5 h-5" />
