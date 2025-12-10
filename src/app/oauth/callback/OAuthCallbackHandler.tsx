@@ -4,10 +4,12 @@ import { useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "../../services/supabaseClient";
 import { thirdPartyLogin } from "../../services/auth";
+import { useAuth } from "../../contexts/AuthContext"; // ✅ NUEVO
 
 export default function OAuthCallbackPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { login } = useAuth(); // ✅ NUEVO
 
   const role = (searchParams.get("role") as "client" | "provider") || "client";
 
@@ -82,9 +84,8 @@ export default function OAuthCallbackPage() {
         const dataBack = await thirdPartyLogin(role, body);
         console.log("✅ Data back =>", dataBack);
 
-        // Guardar en localStorage para que AuthContext lo lea
-        localStorage.setItem("token", dataBack.accessToken);
-        localStorage.setItem("user", JSON.stringify(dataBack.user));
+        // ✅ Actualizar contexto de autenticación (y localStorage desde AuthContext)
+        login(dataBack.user, dataBack.accessToken);
 
         // Limpiar hash de la URL
         window.history.replaceState({}, document.title, "/");
@@ -103,7 +104,7 @@ export default function OAuthCallbackPage() {
     };
 
     processOAuthLogin();
-  }, [router, role]);
+  }, [router, role, login]); // ✅ login en deps
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 text-gray-700">
