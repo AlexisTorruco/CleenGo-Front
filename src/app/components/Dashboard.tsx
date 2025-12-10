@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/app/contexts/AuthContext';
 import ClientDashboard from './ClientDashboard';
 import ProviderDashboard from './ProviderDashboard';
+import AdminDashboard from './DashboardAdmin';
 
 const Dashboard = () => {
   const { user, token } = useAuth();
@@ -40,7 +41,7 @@ const Dashboard = () => {
 
   // Para admin, mostrar el dashboard de cliente
   if (user.role === 'admin') {
-    return <ClientDashboard />;
+    return <AdminDashboard />;
   }
 
   // Fallback para roles no reconocidos

@@ -8,7 +8,7 @@ interface User {
   name: string;
   surname?: string;
   profileImgUrl?: string;
-  role: 'client' | 'provider';
+  role: 'client' | 'provider' | 'admin';
 }
 
 interface AuthContextType {
@@ -67,7 +67,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const login = (rawUser: Record<string, unknown>, token: string) => {
     // Validar y normalizar el rol
-    const validRoles = ['client', 'provider'];
+    const validRoles = ['client', 'provider', 'admin'];
     const role = validRoles.includes(String(rawUser.role)) ? String(rawUser.role) : 'client';
 
     const normalizedUser: User = {
@@ -76,7 +76,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       name: String(rawUser.name || rawUser.full_name || ''),
       surname: String(rawUser.surname || ''),
       profileImgUrl: String(rawUser.profileImgUrl || rawUser.avatar_url || ''),
-      role: role as 'client' | 'provider',
+      role: role as 'client' | 'provider' | 'admin',
     };
 
     setUser(normalizedUser);
