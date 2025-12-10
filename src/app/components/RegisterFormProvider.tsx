@@ -1,11 +1,11 @@
-"use client";
+'use client';
 
-import Image from "next/image";
-import { useForm } from "react-hook-form";
-import { registerProvider } from "@/app/services/auth";
-import { useState } from "react";
-import Swal from "sweetalert2";
-import OAuthLoginButton from "./OAuthLoginButton"; // ⬅️ NUEVO
+import Image from 'next/image';
+import { useForm } from 'react-hook-form';
+import { registerProvider } from '@/app/services/auth';
+import { useState } from 'react';
+import Swal from 'sweetalert2';
+import OAuthLoginButton from './OAuthLoginButton'; // ⬅️ NUEVO
 
 interface ProviderFormData {
   name: string;
@@ -29,11 +29,11 @@ interface Country {
 }
 
 const COUNTRIES: Country[] = [
-  { code: "+52", abbr: "MX", flagSrc: "/flags/mx.svg" },
-  { code: "+54", abbr: "AR", flagSrc: "/flags/ar.svg" },
-  { code: "+51", abbr: "PE", flagSrc: "/flags/pe.svg" },
-  { code: "+57", abbr: "CO", flagSrc: "/flags/co.svg" },
-  { code: "+56", abbr: "CL", flagSrc: "/flags/cl.svg" },
+  { code: '+52', abbr: 'MX', flagSrc: '/flags/mx.svg' },
+  { code: '+54', abbr: 'AR', flagSrc: '/flags/ar.svg' },
+  { code: '+51', abbr: 'PE', flagSrc: '/flags/pe.svg' },
+  { code: '+57', abbr: 'CO', flagSrc: '/flags/co.svg' },
+  { code: '+56', abbr: 'CL', flagSrc: '/flags/cl.svg' },
 ];
 
 // Iconos ver/ocultar contraseña (como cliente)
@@ -74,7 +74,7 @@ export default function RegisterProviderForm() {
     reset,
     formState: { errors, isValid, isSubmitting },
   } = useForm<ProviderFormData>({
-    mode: "onChange",
+    mode: 'onChange',
   });
 
   const [loading, setLoading] = useState(false);
@@ -86,29 +86,29 @@ export default function RegisterProviderForm() {
   const [selectedCountry, setSelectedCountry] = useState<Country>(COUNTRIES[0]);
   const [isCountryOpen, setIsCountryOpen] = useState(false);
 
-  const password = watch("password") || "";
-  const confirmPassword = watch("confirmPassword") || "";
-  const phoneValue = watch("phone") || "";
+  const password = watch('password') || '';
+  const confirmPassword = watch('confirmPassword') || '';
+  const phoneValue = watch('phone') || '';
 
   // ===== VALIDAR EDAD Y RANGO DE FECHA =====
   const validateBirthDate = (value: string) => {
-    if (!value) return "La fecha de nacimiento es obligatoria";
+    if (!value) return 'La fecha de nacimiento es obligatoria';
 
     const birthDate = new Date(value);
     const today = new Date();
 
-    if (isNaN(birthDate.getTime())) return "Fecha inválida";
+    if (isNaN(birthDate.getTime())) return 'Fecha inválida';
 
     const year = birthDate.getFullYear();
-    if (year < 1900) return "El año debe ser mayor o igual a 1900";
-    if (birthDate > today) return "La fecha no puede ser futura";
+    if (year < 1900) return 'El año debe ser mayor o igual a 1900';
+    if (birthDate > today) return 'La fecha no puede ser futura';
 
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const m = today.getMonth() - birthDate.getMonth();
-    const d = today.getDate() - birthDate.getDate();
-    const realAge = m > 0 || (m === 0 && d >= 0) ? age : age - 1;
+    const age: number = today.getFullYear() - birthDate.getFullYear();
+    const m: number = today.getMonth() - birthDate.getMonth();
+    const d: number = today.getDate() - birthDate.getDate();
+    const realAge: number = m > 0 || (m === 0 && d >= 0) ? age : age - 1;
 
-    if (realAge < 18) return "Debes ser mayor de edad (≥18 años)";
+    if (realAge < 18) return 'Debes ser mayor de edad (≥18 años)';
 
     return true;
   };
@@ -122,30 +122,29 @@ export default function RegisterProviderForm() {
       ...data,
       phone: fullPhone,
       profileImgUrl:
-        data.profileImgUrl && data.profileImgUrl.trim() !== ""
-          ? data.profileImgUrl
-          : undefined,
+        data.profileImgUrl && data.profileImgUrl.trim() !== '' ? data.profileImgUrl : undefined,
     };
 
     try {
       const response = await registerProvider(bodyToSend);
 
       await Swal.fire({
-        icon: "success",
-        title: "Proveedor registrado",
-        text: response?.message || "Proveedor registrado exitosamente",
-        confirmButtonText: "Aceptar",
+        icon: 'success',
+        title: 'Proveedor registrado',
+        text: response?.message || 'Proveedor registrado exitosamente',
+        confirmButtonText: 'Aceptar',
       });
 
       reset();
-    } catch (err: any) {
-      const message = err?.response?.data?.message || "Error inesperado";
+    } catch (err) {
+      const error = err as { response?: { data?: { message?: string } } };
+      const message = error?.response?.data?.message || 'Error inesperado';
 
       await Swal.fire({
-        icon: "error",
-        title: "Error al registrar",
+        icon: 'error',
+        title: 'Error al registrar',
         text: message,
-        confirmButtonText: "Cerrar",
+        confirmButtonText: 'Cerrar',
       });
     } finally {
       setLoading(false);
@@ -155,38 +154,26 @@ export default function RegisterProviderForm() {
   return (
     <div className="bg-white text-gray-900 shadow-lg rounded-xl p-8 w-full max-w-md flex flex-col items-center">
       <div className="relative w-[400px] h-[200px] mx-auto mb-2">
-        <Image
-          src="/logo-cleengo.svg"
-          alt="CleenGo Logo"
-          fill
-          className="object-contain"
-        />
+        <Image src="/logo-cleengo.svg" alt="CleenGo Logo" fill className="object-contain" />
       </div>
 
-      <h2 className="text-2xl font-semibold text-center mb-6">
-        Registro Proveedor
-      </h2>
+      <h2 className="text-2xl font-semibold text-center mb-6">Registro Proveedor</h2>
 
-      <form
-        className="flex flex-col gap-4 w-full"
-        onSubmit={handleSubmit(onSubmit)}
-      >
+      <form className="flex flex-col gap-4 w-full" onSubmit={handleSubmit(onSubmit)}>
         {/* NOMBRE */}
         <div className="flex flex-col">
           <label>Nombre</label>
           <input
             className="border rounded-lg bg-white text-gray-900 px-3 py-2"
-            {...register("name", {
-              required: "El nombre es obligatorio",
+            {...register('name', {
+              required: 'El nombre es obligatorio',
               pattern: {
                 value: /^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ\s]+$/,
-                message: "Solo letras y espacios",
+                message: 'Solo letras y espacios',
               },
             })}
           />
-          {errors.name && (
-            <span className="text-red-500 text-sm">{errors.name.message}</span>
-          )}
+          {errors.name && <span className="text-red-500 text-sm">{errors.name.message}</span>}
         </div>
 
         {/* APELLIDO */}
@@ -194,19 +181,15 @@ export default function RegisterProviderForm() {
           <label>Apellido</label>
           <input
             className="border rounded-lg bg-white text-gray-900 px-3 py-2"
-            {...register("surname", {
-              required: "El apellido es obligatorio",
+            {...register('surname', {
+              required: 'El apellido es obligatorio',
               pattern: {
                 value: /^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ\s]+$/,
-                message: "Solo letras y espacios",
+                message: 'Solo letras y espacios',
               },
             })}
           />
-          {errors.surname && (
-            <span className="text-red-500 text-sm">
-              {errors.surname.message}
-            </span>
-          )}
+          {errors.surname && <span className="text-red-500 text-sm">{errors.surname.message}</span>}
         </div>
 
         {/* EMAIL */}
@@ -215,17 +198,15 @@ export default function RegisterProviderForm() {
           <input
             type="email"
             className="border rounded-lg bg-white text-gray-900 px-3 py-2"
-            {...register("email", {
-              required: "El correo es obligatorio",
+            {...register('email', {
+              required: 'El correo es obligatorio',
               pattern: {
                 value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-                message: "Correo inválido",
+                message: 'Correo inválido',
               },
             })}
           />
-          {errors.email && (
-            <span className="text-red-500 text-sm">{errors.email.message}</span>
-          )}
+          {errors.email && <span className="text-red-500 text-sm">{errors.email.message}</span>}
         </div>
 
         {/* PASSWORD */}
@@ -260,20 +241,16 @@ export default function RegisterProviderForm() {
 
           <div className="flex items-center border rounded-lg px-3 py-2 bg-white">
             <input
-              type={showPassword ? "text" : "password"}
+              type={showPassword ? 'text' : 'password'}
               className="flex-1 outline-none text-gray-900"
-              {...register("password", {
-                required: "La contraseña es obligatoria",
+              {...register('password', {
+                required: 'La contraseña es obligatoria',
                 validate: {
-                  minLength: (v) =>
-                    v.length >= 8 || "Debe tener mínimo 8 caracteres",
-                  hasUpper: (v) =>
-                    /[A-Z]/.test(v) || "Debe incluir una mayúscula",
-                  hasLower: (v) =>
-                    /[a-z]/.test(v) || "Debe incluir una minúscula",
-                  hasNumber: (v) => /\d/.test(v) || "Debe incluir un número",
-                  hasSymbol: (v) =>
-                    /[^A-Za-z0-9]/.test(v) || "Debe incluir un símbolo",
+                  minLength: (v) => v.length >= 8 || 'Debe tener mínimo 8 caracteres',
+                  hasUpper: (v) => /[A-Z]/.test(v) || 'Debe incluir una mayúscula',
+                  hasLower: (v) => /[a-z]/.test(v) || 'Debe incluir una minúscula',
+                  hasNumber: (v) => /\d/.test(v) || 'Debe incluir un número',
+                  hasSymbol: (v) => /[^A-Za-z0-9]/.test(v) || 'Debe incluir un símbolo',
                 },
               })}
             />
@@ -287,9 +264,7 @@ export default function RegisterProviderForm() {
           </div>
 
           {errors.password && (
-            <span className="text-red-500 text-xs mt-1">
-              {errors.password.message}
-            </span>
+            <span className="text-red-500 text-xs mt-1">{errors.password.message}</span>
           )}
         </div>
 
@@ -299,12 +274,11 @@ export default function RegisterProviderForm() {
 
           <div className="flex items-center border rounded-lg px-3 py-2 bg-white">
             <input
-              type={showConfirmPassword ? "text" : "password"}
+              type={showConfirmPassword ? 'text' : 'password'}
               className="flex-1 outline-none text-gray-900"
-              {...register("confirmPassword", {
-                required: "Debes confirmar la contraseña",
-                validate: (value) =>
-                  value === password || "Las contraseñas no coinciden",
+              {...register('confirmPassword', {
+                required: 'Debes confirmar la contraseña',
+                validate: (value) => value === password || 'Las contraseñas no coinciden',
               })}
             />
             <button
@@ -316,18 +290,12 @@ export default function RegisterProviderForm() {
             </button>
           </div>
 
-          {confirmPassword &&
-            !errors.confirmPassword &&
-            confirmPassword === password && (
-              <span className="text-xs mt-1 text-green-600">
-                Las contraseñas coinciden
-              </span>
-            )}
+          {confirmPassword && !errors.confirmPassword && confirmPassword === password && (
+            <span className="text-xs mt-1 text-green-600">Las contraseñas coinciden</span>
+          )}
 
           {errors.confirmPassword && (
-            <span className="text-red-500 text-xs mt-1">
-              {errors.confirmPassword.message}
-            </span>
+            <span className="text-red-500 text-xs mt-1">{errors.confirmPassword.message}</span>
           )}
         </div>
 
@@ -337,14 +305,12 @@ export default function RegisterProviderForm() {
           <input
             type="date"
             className="border rounded-lg bg-white text-gray-900 px-3 py-2"
-            {...register("birthDate", {
+            {...register('birthDate', {
               validate: validateBirthDate,
             })}
           />
           {errors.birthDate && (
-            <span className="text-red-500 text-sm">
-              {errors.birthDate.message}
-            </span>
+            <span className="text-red-500 text-sm">{errors.birthDate.message}</span>
           )}
         </div>
 
@@ -358,10 +324,10 @@ export default function RegisterProviderForm() {
               id="profileImgUrl"
               className="border rounded-lg bg-white text-gray-900 px-3 py-2 w-full"
               placeholder="Ej: https://miimagen.com/foto.jpg"
-              {...register("profileImgUrl", {
+              {...register('profileImgUrl', {
                 pattern: {
                   value: /^https?:\/\/.+/,
-                  message: "Debes ingresar una URL válida",
+                  message: 'Debes ingresar una URL válida',
                 },
               })}
             />
@@ -397,10 +363,12 @@ export default function RegisterProviderForm() {
                   const url = URL.createObjectURL(file);
                   setPreview(url);
 
-                  const inputEl = document.getElementById("profileImgUrl") as HTMLInputElement | null;
+                  const inputEl = document.getElementById(
+                    'profileImgUrl'
+                  ) as HTMLInputElement | null;
                   if (inputEl) {
                     inputEl.value = url;
-                    inputEl.dispatchEvent(new Event("input", { bubbles: true }));
+                    inputEl.dispatchEvent(new Event('input', { bubbles: true }));
                   }
                 }
               }}
@@ -408,9 +376,7 @@ export default function RegisterProviderForm() {
           </div>
 
           {errors.profileImgUrl && (
-            <span className="text-red-500 text-sm mt-1">
-              {errors.profileImgUrl.message}
-            </span>
+            <span className="text-red-500 text-sm mt-1">{errors.profileImgUrl.message}</span>
           )}
 
           {/* FOTO PREVIA */}
@@ -424,7 +390,6 @@ export default function RegisterProviderForm() {
             </div>
           )}
         </div>
-
 
         {/* TELÉFONO CON PAÍS */}
         <div className="flex flex-col">
@@ -484,16 +449,14 @@ export default function RegisterProviderForm() {
               className="border rounded-lg bg-white text-gray-900 px-3 py-2 flex-1"
               placeholder="1234567890"
               maxLength={15}
-              {...register("phone", {
-                required: "El teléfono es obligatorio",
+              {...register('phone', {
+                required: 'El teléfono es obligatorio',
                 validate: (value) => {
-                  if (!value.trim()) return "El teléfono es obligatorio";
-                  if (!/^\d+$/.test(value)) return "Solo números";
+                  if (!value.trim()) return 'El teléfono es obligatorio';
+                  if (!/^\d+$/.test(value)) return 'Solo números';
                   const fullPhone = `${selectedCountry.code}${value}`;
-                  if (fullPhone.length < 10)
-                    return "Debe tener mínimo 10 caracteres (incl. lada)";
-                  if (fullPhone.length > 15)
-                    return "Máximo 15 caracteres (incl. lada)";
+                  if (fullPhone.length < 10) return 'Debe tener mínimo 10 caracteres (incl. lada)';
+                  if (fullPhone.length > 15) return 'Máximo 15 caracteres (incl. lada)';
                   return true;
                 },
               })}
@@ -501,9 +464,7 @@ export default function RegisterProviderForm() {
           </div>
 
           {errors.phone && (
-            <span className="text-red-500 text-sm mt-1">
-              {errors.phone.message}
-            </span>
+            <span className="text-red-500 text-sm mt-1">{errors.phone.message}</span>
           )}
         </div>
 
@@ -513,30 +474,28 @@ export default function RegisterProviderForm() {
 
           <div className="grid grid-cols-2 gap-2 mt-1">
             {[
-              "Lunes",
-              "Martes",
-              "Miércoles",
-              "Jueves",
-              "Viernes",
-              "Sábado",
-              "Domingo",
+              { label: 'Lunes', value: 'Monday' },
+              { label: 'Martes', value: 'Tuesday' },
+              { label: 'Miércoles', value: 'Wednesday' },
+              { label: 'Jueves', value: 'Thursday' },
+              { label: 'Viernes', value: 'Friday' },
+              { label: 'Sábado', value: 'Saturday' },
+              { label: 'Domingo', value: 'Sunday' },
             ].map((day) => (
-              <label key={day} className="flex items-center gap-2">
+              <label key={day.value} className="flex items-center gap-2">
                 <input
                   type="checkbox"
-                  value={day}
-                  {...register("days", {
-                    required: "Debes seleccionar al menos un día",
+                  value={day.value}
+                  {...register('days', {
+                    required: 'Debes seleccionar al menos un día',
                   })}
                 />
-                {day}
+                {day.label}
               </label>
             ))}
           </div>
 
-          {errors.days && (
-            <span className="text-red-500 text-sm">{errors.days.message}</span>
-          )}
+          {errors.days && <span className="text-red-500 text-sm">{errors.days.message}</span>}
         </div>
 
         {/* HOURS */}
@@ -544,29 +503,23 @@ export default function RegisterProviderForm() {
           <label>Horarios disponibles</label>
 
           <div className="grid grid-cols-2 gap-2 mt-1">
-            {[
-              "06:00-09:00",
-              "09:00-12:00",
-              "12:00-15:00",
-              "15:00-18:00",
-              "18:00-21:00",
-            ].map((hour) => (
-              <label key={hour} className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  value={hour}
-                  {...register("hours", {
-                    required: "Debes seleccionar al menos un horario",
-                  })}
-                />
-                {hour}
-              </label>
-            ))}
+            {['06:00-09:00', '09:00-12:00', '12:00-15:00', '15:00-18:00', '18:00-21:00'].map(
+              (hour) => (
+                <label key={hour} className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    value={hour}
+                    {...register('hours', {
+                      required: 'Debes seleccionar al menos un horario',
+                    })}
+                  />
+                  {hour}
+                </label>
+              )
+            )}
           </div>
 
-          {errors.hours && (
-            <span className="text-red-500 text-sm">{errors.hours.message}</span>
-          )}
+          {errors.hours && <span className="text-red-500 text-sm">{errors.hours.message}</span>}
         </div>
 
         {/* ABOUT */}
@@ -575,21 +528,19 @@ export default function RegisterProviderForm() {
           <textarea
             rows={3}
             className="border rounded-lg bg-white text-gray-900 px-3 py-2"
-            {...register("about", {
-              required: "Este campo es obligatorio",
+            {...register('about', {
+              required: 'Este campo es obligatorio',
               minLength: {
                 value: 20,
-                message: "Debe tener al menos 20 caracteres",
+                message: 'Debe tener al menos 20 caracteres',
               },
               maxLength: {
                 value: 250,
-                message: "Máximo 250 caracteres",
+                message: 'Máximo 250 caracteres',
               },
             })}
           ></textarea>
-          {errors.about && (
-            <span className="text-red-500 text-sm">{errors.about.message}</span>
-          )}
+          {errors.about && <span className="text-red-500 text-sm">{errors.about.message}</span>}
         </div>
 
         {/* BOTÓN SUBMIT */}
@@ -597,9 +548,7 @@ export default function RegisterProviderForm() {
           disabled={loading || !isValid || isSubmitting}
           className="bg-blue-600 text-white py-2 rounded-lg hover:opacity-90 disabled:opacity-70"
         >
-          {loading || isSubmitting
-            ? "Registrando..."
-            : "Registrarme como Proveedor"}
+          {loading || isSubmitting ? 'Registrando...' : 'Registrarme como Proveedor'}
         </button>
 
         {/* 🔵 LOGIN CON GOOGLE COMO PROVEEDOR */}

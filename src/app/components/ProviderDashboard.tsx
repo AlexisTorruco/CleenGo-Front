@@ -267,6 +267,19 @@ export default function ProviderDashboard() {
     return () => window.removeEventListener('focus', handleFocus);
   }, [user, token, router, fetchData]);
 
+  const translateDay = (day: string) => {
+    const translations: { [key: string]: string } = {
+      Monday: 'Lunes',
+      Tuesday: 'Martes',
+      Wednesday: 'Miércoles',
+      Thursday: 'Jueves',
+      Friday: 'Viernes',
+      Saturday: 'Sábado',
+      Sunday: 'Domingo',
+    };
+    return translations[day] || day;
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-emerald-50 flex items-center justify-center">
@@ -456,7 +469,7 @@ export default function ProviderDashboard() {
                         key={day}
                         className="px-3 py-1 bg-gradient-to-r from-blue-100 to-cyan-100 text-blue-700 rounded-full text-sm font-medium"
                       >
-                        {day}
+                        {translateDay(day)}
                       </span>
                     ))}
                   </div>
