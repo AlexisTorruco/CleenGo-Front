@@ -1,10 +1,12 @@
-"use client";
+'use client';
 
-import Image from "next/image";
-import { useState, ChangeEvent, FormEvent } from "react";
-import { registerClient } from "../services/auth";
-import OAuthLoginButton from "./OAuthLoginButton";
-import Swal from "sweetalert2";
+import Image from 'next/image';
+import { useState, ChangeEvent, FormEvent } from 'react';
+import { useRouter } from 'next/navigation';
+import { registerClient } from '../services/auth';
+import OAuthLoginButton from './OAuthLoginButton';
+import Swal from 'sweetalert2';
+import Link from 'next/link';
 
 interface FormState {
   name: string;
@@ -13,8 +15,6 @@ interface FormState {
   password: string;
   confirmPassword: string;
   birthDate: string;
-  profileImgUrl: string;
-  phone: string; // solo número local
 }
 
 interface ErrorState {
@@ -24,29 +24,13 @@ interface ErrorState {
   password: string;
   confirmPassword: string;
   birthDate: string;
-  phone: string;
 }
 
-interface Country {
-  code: string; // +52
-  abbr: string; // MX
-  flagSrc: string; // /flags/mx.svg
-}
-
-// Lista de países (puedes agregar más)
-const COUNTRIES: Country[] = [
-  { code: "+52", abbr: "MX", flagSrc: "/flags/mx.svg" },
-  { code: "+54", abbr: "AR", flagSrc: "/flags/ar.svg" },
-  { code: "+51", abbr: "PE", flagSrc: "/flags/pe.svg" },
-  { code: "+57", abbr: "CO", flagSrc: "/flags/co.svg" },
-  { code: "+56", abbr: "CL", flagSrc: "/flags/cl.svg" },
-];
-
-// Iconos SVG para ver / ocultar contraseña
+// Iconos SVG
 const EyeIcon = () => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
-    className="h-4 w-4"
+    className="h-5 w-5"
     viewBox="0 0 24 24"
     fill="none"
     stroke="currentColor"
@@ -60,7 +44,7 @@ const EyeIcon = () => (
 const EyeOffIcon = () => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
-    className="h-4 w-4"
+    className="h-5 w-5"
     viewBox="0 0 24 24"
     fill="none"
     stroke="currentColor"
@@ -73,106 +57,74 @@ const EyeOffIcon = () => (
 );
 
 export default function RegisterFormClient() {
+  const router = useRouter();
   const [form, setForm] = useState<FormState>({
-    name: "",
-    surname: "",
-    email: "",
-    password: "",
-    confirmPassword: "",
-    birthDate: "",
-    profileImgUrl: "",
-    phone: "",
+    name: '',
+    surname: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+    birthDate: '',
   });
 
   const [errors, setErrors] = useState<ErrorState>({
-    name: "",
-    surname: "",
-    email: "",
-    password: "",
-    confirmPassword: "",
-    birthDate: "",
-    phone: "",
+    name: '',
+    surname: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+    birthDate: '',
   });
 
   const [loading, setLoading] = useState(false);
-
-  const [selectedCountry, setSelectedCountry] =
-    useState<Country>(COUNTRIES[0]);
-  const [isCountryOpen, setIsCountryOpen] = useState(false);
-
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  // -------------------------------
-  // VALIDACIONES EN TIEMPO REAL
-  // -------------------------------
-  const validateField = (
-    field: keyof ErrorState,
-    value: string,
-    currentForm: FormState
-  ) => {
-    let msg = "";
+  // VALIDACIONES
+  const validateField = (field: keyof ErrorState, value: string, currentForm: FormState) => {
+    let msg = '';
 
     switch (field) {
-      case "name":
-      case "surname":
-        if (!value.trim()) msg = "Campo obligatorio";
-        else if (!/^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ\s]+$/.test(value))
-          msg = "Solo letras y espacios";
+      case 'name':
+      case 'surname':
+        if (!value.trim()) msg = 'Campo obligatorio';
+        else if (!/^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ\s]+$/.test(value)) msg = 'Solo letras y espacios';
         break;
 
-      case "email":
-        if (!value.trim()) msg = "El correo es obligatorio";
-        else if (!/^\S+@\S+\.\S+$/.test(value)) msg = "Correo inválido";
+      case 'email':
+        if (!value.trim()) msg = 'El correo es obligatorio';
+        else if (!/^\S+@\S+\.\S+$/.test(value)) msg = 'Correo inválido';
         break;
 
-      case "password": {
+      case 'password': {
         const strongRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
-        if (!value.trim()) msg = "La contraseña es obligatoria";
-        else if (!strongRegex.test(value))
-          msg = "Debe tener mayús, minús y número (mín 8)";
-        else if (
-          currentForm.confirmPassword &&
-          value !== currentForm.confirmPassword
-        )
-          msg = "Las contraseñas no coinciden";
+        if (!value.trim()) msg = 'La contraseña es obligatoria';
+        else if (!strongRegex.test(value)) msg = 'Debe tener mayús, minús y número (mín 8)';
+        else if (currentForm.confirmPassword && value !== currentForm.confirmPassword)
+          msg = 'Las contraseñas no coinciden';
         break;
       }
 
-      case "confirmPassword":
-        if (!value.trim()) msg = "Confirma tu contraseña";
-        else if (value !== currentForm.password)
-          msg = "Las contraseñas no coinciden";
+      case 'confirmPassword':
+        if (!value.trim()) msg = 'Confirma tu contraseña';
+        else if (value !== currentForm.password) msg = 'Las contraseñas no coinciden';
         break;
 
-      case "phone": {
-        if (!value.trim()) msg = "El teléfono es obligatorio";
-        else if (!/^\d+$/.test(value)) msg = "Solo números";
-        else {
-          const fullPhone = `${selectedCountry.code}${value}`;
-          if (fullPhone.length < 10)
-            msg = "Debe tener mínimo 10 caracteres (incl. lada)";
-          else if (fullPhone.length > 15)
-            msg = "Máximo 15 caracteres (incl. lada)";
-        }
-        break;
-      }
-
-      case "birthDate": {
+      case 'birthDate': {
         if (!value.trim()) {
-          msg = "Fecha obligatoria";
+          msg = 'Fecha obligatoria';
         } else {
           const birthDate = new Date(value);
           const today = new Date();
-          if (isNaN(birthDate.getTime())) msg = "Fecha inválida";
+          if (isNaN(birthDate.getTime())) msg = 'Fecha inválida';
           else if (birthDate.getFullYear() < 1900 || birthDate > today)
-            msg = "Año fuera de rango (1900–hoy)";
+            msg = 'Año fuera de rango (1900–hoy)';
           else {
             const age = today.getFullYear() - birthDate.getFullYear();
             const m = today.getMonth() - birthDate.getMonth();
             const d = today.getDate() - birthDate.getDate();
             const realAge = m > 0 || (m === 0 && d >= 0) ? age : age - 1;
-            if (realAge < 18) msg = "Debes ser mayor de edad (≥18 años)";
+            if (realAge < 18) msg = 'Debes ser mayor de edad (≥18 años)';
           }
         }
         break;
@@ -196,338 +148,246 @@ export default function RegisterFormClient() {
       form.email &&
       form.password &&
       form.confirmPassword &&
-      form.birthDate &&
-      form.phone;
+      form.birthDate;
 
-    const noErrors = Object.values(errors).every((e) => e === "");
+    const noErrors = Object.values(errors).every((e) => e === '');
 
     return !!(filled && noErrors);
   };
 
-  // -------------------------------
-  // SUBMIT
-  // -------------------------------
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     if (!allValid()) {
       Swal.fire({
-        icon: "warning",
-        title: "Formulario incompleto",
-        text: "Revisa los campos marcados en rojo.",
+        icon: 'warning',
+        title: 'Formulario incompleto',
+        text: 'Revisa los campos marcados en rojo.',
       });
       return;
     }
 
     setLoading(true);
 
-    const fullPhone = `${selectedCountry.code}${form.phone}`;
-
-    const bodyToSend = {
-      ...form,
-      phone: fullPhone,
-      profileImgUrl:
-        form.profileImgUrl.trim() === "" ? undefined : form.profileImgUrl,
-    };
-
     try {
-      await registerClient(bodyToSend);
+      await registerClient(form);
 
       Swal.fire({
-        icon: "success",
-        title: "Registro exitoso",
-        text: "Cliente registrado correctamente.",
+        icon: 'success',
+        title: 'Registro exitoso',
+        text: 'Cliente registrado correctamente.',
+      }).then(() => {
+        router.push('/login');
       });
 
       setForm({
-        name: "",
-        surname: "",
-        email: "",
-        password: "",
-        confirmPassword: "",
-        birthDate: "",
-        profileImgUrl: "",
-        phone: "",
+        name: '',
+        surname: '',
+        email: '',
+        password: '',
+        confirmPassword: '',
+        birthDate: '',
       });
       setErrors({
-        name: "",
-        surname: "",
-        email: "",
-        password: "",
-        confirmPassword: "",
-        birthDate: "",
-        phone: "",
+        name: '',
+        surname: '',
+        email: '',
+        password: '',
+        confirmPassword: '',
+        birthDate: '',
       });
-      setSelectedCountry(COUNTRIES[0]);
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { message?: string } } };
       Swal.fire({
-        icon: "error",
-        title: "Error",
-        text: err?.response?.data?.message || "Ocurrió un error",
+        icon: 'error',
+        title: 'Error',
+        text: error?.response?.data?.message || 'Ocurrió un error',
       });
     } finally {
       setLoading(false);
     }
   };
 
-  // -------------------------------
-  // UI
-  // -------------------------------
   return (
-    <div className="bg-white shadow-lg rounded-xl p-8 w-full max-w-md">
-      {/* LOGO */}
-      <div className="flex justify-center mb-0">
-        <Image
-          src="/logo-vertical-sin-fondo.png"
-          alt="CleenGo Logo"
-          width={150}
-          height={150}
-          className="object-contain"
-        />
-      </div>
-
-      <h2 className="text-2xl font-semibold text-center mb-6">
-        Registro Cliente
-      </h2>
-
-      <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
-        {/* NOMBRE */}
-        <div className="flex flex-col">
-          <label>Nombre</label>
-          <input
-            name="name"
-            value={form.name}
-            onChange={handleChange}
-            placeholder="Ej: Juan"
-            className="border px-3 py-2 rounded-lg"
-          />
-          {errors.name && <p className="text-red-500 text-sm">{errors.name}</p>}
-        </div>
-
-        {/* APELLIDO */}
-        <div className="flex flex-col">
-          <label>Apellido</label>
-          <input
-            name="surname"
-            value={form.surname}
-            onChange={handleChange}
-            placeholder="Ej: Pérez"
-            className="border px-3 py-2 rounded-lg"
-          />
-          {errors.surname && (
-            <p className="text-red-500 text-sm">{errors.surname}</p>
-          )}
-        </div>
-
-        {/* EMAIL */}
-        <div className="flex flex-col">
-          <label>Correo</label>
-          <input
-            name="email"
-            type="email"
-            value={form.email}
-            onChange={handleChange}
-            placeholder="Ej: correo@gmail.com"
-            className="border px-3 py-2 rounded-lg"
-          />
-          {errors.email && (
-            <p className="text-red-500 text-sm">{errors.email}</p>
-          )}
-        </div>
-
-        {/* PASSWORD */}
-        <div className="flex flex-col">
-          <label>Contraseña</label>
-          <div className="flex items-center border rounded-lg px-3 py-2">
-            <input
-              name="password"
-              type={showPassword ? "text" : "password"}
-              value={form.password}
-              onChange={handleChange}
-              className="flex-1 outline-none"
-              placeholder="********"
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4 py-12">
+      <div className="w-full max-w-xl">
+        <div className="bg-white shadow-lg rounded-2xl p-10 border border-gray-100">
+          {/* Logo */}
+          <div className="flex justify-center mb-6">
+            <Image
+              src="/logo-cleengo.svg"
+              alt="CleenGo Logo"
+              width={200}
+              height={60}
+              className="object-contain"
             />
-            <button
-              type="button"
-              onClick={() => setShowPassword((v) => !v)}
-              className="ml-2 text-gray-600 hover:text-black"
-            >
-              {showPassword ? <EyeOffIcon /> : <EyeIcon />}
-            </button>
-          </div>
-          {errors.password && (
-            <p className="text-red-500 text-sm">{errors.password}</p>
-          )}
-        </div>
-
-        {/* CONFIRM PASSWORD */}
-        <div className="flex flex-col">
-          <label>Confirmar contraseña</label>
-          <div className="flex items-center border rounded-lg px-3 py-2">
-            <input
-              name="confirmPassword"
-              type={showConfirmPassword ? "text" : "password"}
-              value={form.confirmPassword}
-              onChange={handleChange}
-              className="flex-1 outline-none"
-              placeholder="********"
-            />
-            <button
-              type="button"
-              onClick={() => setShowConfirmPassword((v) => !v)}
-              className="ml-2 text-gray-600 hover:text-black"
-            >
-              {showConfirmPassword ? <EyeOffIcon /> : <EyeIcon />}
-            </button>
-          </div>
-          {errors.confirmPassword && (
-            <p className="text-red-500 text-sm">{errors.confirmPassword}</p>
-          )}
-        </div>
-
-        {/* FECHA DE NACIMIENTO */}
-        <div className="flex flex-col">
-          <label>Fecha de nacimiento</label>
-          <input
-            name="birthDate"
-            type="date"
-            value={form.birthDate}
-            onChange={handleChange}
-            className="border px-3 py-2 rounded-lg"
-          />
-          {errors.birthDate && (
-            <p className="text-red-500 text-sm">{errors.birthDate}</p>
-          )}
-        </div>
-
-        {/* IMG PERFIL */}
-        <div className="flex flex-col">
-          <label>Imagen de perfil (URL)</label>
-
-          <div className="flex gap-2">
-            <input
-              name="profileImgUrl"
-              value={form.profileImgUrl}
-              onChange={handleChange}
-              placeholder="Ej: https://miimagen.com/foto.jpg"
-              className="border px-3 py-2 rounded-lg flex-1"
-            />
-
-            {/* Botón para subir archivo (diseño igual al que pediste) */}
-            <label className="bg-gray-200 px-3 py-2 rounded-lg cursor-pointer hover:bg-gray-300 text-sm whitespace-nowrap flex items-center gap-2">
-              Subir
-              <input
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={(e) => {
-                  if (e.target.files?.[0]) {
-                    const fileUrl = URL.createObjectURL(e.target.files[0]);
-                    setForm((prev) => ({ ...prev, profileImgUrl: fileUrl }));
-                    // intentar re-validar (si quieres validar la URL, pero ErrorState no tiene profileImgUrl)
-                    // no llamamos validateField porque profileImgUrl no está en ErrorState
-                  }
-                }}
-              />
-            </label>
           </div>
 
-          {/* Vista previa */}
-          {form.profileImgUrl && (
-            <div className="mt-3 flex justify-center">
-              <img
-                src={form.profileImgUrl}
-                alt="Vista previa"
-                className="w-28 h-28 object-cover rounded-full border shadow-sm"
-              />
-            </div>
-          )}
-        </div>
+          <h2 className="text-3xl font-bold text-center text-gray-800 mb-3">Registro Cliente</h2>
+          <p className="text-center text-gray-500 mb-8">
+            Crea tu cuenta para acceder a servicios de limpieza
+          </p>
 
-        {/* TELÉFONO CON BANDERA SVG + CÓDIGO */}
-        <div className="flex flex-col">
-          <label>Teléfono</label>
-
-          <div className="flex gap-2 items-center">
-            {/* Dropdown custom con bandera + código + MX */}
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => setIsCountryOpen((prev) => !prev)}
-                className="flex items-center gap-2 border rounded-lg px-3 py-2 bg-white min-w-[130px]"
-              >
-                <Image
-                  src={selectedCountry.flagSrc}
-                  alt={selectedCountry.abbr}
-                  width={20}
-                  height={14}
-                  className="rounded-sm object-cover"
+          <form className="flex flex-col gap-5" onSubmit={handleSubmit}>
+            {/* Nombre y Apellido en grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">Nombre</label>
+                <input
+                  name="name"
+                  value={form.name}
+                  onChange={handleChange}
+                  placeholder="Juan"
+                  className={`w-full border rounded-xl px-4 py-3 text-base transition-all
+                    ${errors.name ? 'border-red-400' : 'border-gray-300 focus:border-[#14B8A6]'}
+                    focus:outline-none focus:ring-2 focus:ring-[#14B8A6]/20`}
                 />
-                <span className="text-sm">
-                  {selectedCountry.code} {selectedCountry.abbr}
-                </span>
-                <span className="ml-auto text-xs">▼</span>
-              </button>
+                {errors.name && <p className="text-red-500 text-xs">{errors.name}</p>}
+              </div>
 
-              {isCountryOpen && (
-                <div className="absolute z-20 mt-1 w-full bg-white border rounded-lg shadow-md">
-                  {COUNTRIES.map((c) => (
-                    <button
-                      key={c.code}
-                      type="button"
-                      onClick={() => {
-                        setSelectedCountry(c);
-                        setIsCountryOpen(false);
-                        if (form.phone) {
-                          validateField("phone", form.phone, form);
-                        }
-                      }}
-                      className="flex w-full items-center gap-2 px-3 py-2 hover:bg-gray-100 text-left"
-                    >
-                      <Image
-                        src={c.flagSrc}
-                        alt={c.abbr}
-                        width={20}
-                        height={14}
-                        className="rounded-sm object-cover"
-                      />
-                      <span className="text-sm">
-                        {c.code} {c.abbr}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              )}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">Apellido</label>
+                <input
+                  name="surname"
+                  value={form.surname}
+                  onChange={handleChange}
+                  placeholder="Pérez"
+                  className={`w-full border rounded-xl px-4 py-3 text-base transition-all
+                    ${errors.surname ? 'border-red-400' : 'border-gray-300 focus:border-[#14B8A6]'}
+                    focus:outline-none focus:ring-2 focus:ring-[#14B8A6]/20`}
+                />
+                {errors.surname && <p className="text-red-500 text-xs">{errors.surname}</p>}
+              </div>
             </div>
 
-            {/* Número local */}
-            <input
-              name="phone"
-              value={form.phone}
-              onChange={handleChange}
-              placeholder="1234567890"
-              className="border px-3 py-2 rounded-lg flex-1"
-              maxLength={15}
-            />
-          </div>
+            {/* Email */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">Correo electrónico</label>
+              <input
+                name="email"
+                type="email"
+                value={form.email}
+                onChange={handleChange}
+                placeholder="correo@ejemplo.com"
+                className={`w-full border rounded-xl px-4 py-3 text-base transition-all
+                  ${errors.email ? 'border-red-400' : 'border-gray-300 focus:border-[#14B8A6]'}
+                  focus:outline-none focus:ring-2 focus:ring-[#14B8A6]/20`}
+              />
+              {errors.email && <p className="text-red-500 text-xs">{errors.email}</p>}
+            </div>
 
-          {errors.phone && (
-            <p className="text-red-500 text-sm mt-1">{errors.phone}</p>
-          )}
+            {/* Contraseñas en grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">Contraseña</label>
+                <div
+                  className={`flex items-center border rounded-xl px-4 py-3 transition-all
+                  ${
+                    errors.password
+                      ? 'border-red-400'
+                      : 'border-gray-300 focus-within:border-[#14B8A6]'
+                  }
+                  focus-within:ring-2 focus-within:ring-[#14B8A6]/20`}
+                >
+                  <input
+                    name="password"
+                    type={showPassword ? 'text' : 'password'}
+                    value={form.password}
+                    onChange={handleChange}
+                    className="flex-1 outline-none text-base"
+                    placeholder="••••••••"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((v) => !v)}
+                    className="ml-2 text-gray-400 hover:text-gray-600"
+                  >
+                    {showPassword ? <EyeOffIcon /> : <EyeIcon />}
+                  </button>
+                </div>
+                {errors.password && <p className="text-red-500 text-xs">{errors.password}</p>}
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">Confirmar contraseña</label>
+                <div
+                  className={`flex items-center border rounded-xl px-4 py-3 transition-all
+                  ${
+                    errors.confirmPassword
+                      ? 'border-red-400'
+                      : 'border-gray-300 focus-within:border-[#14B8A6]'
+                  }
+                  focus-within:ring-2 focus-within:ring-[#14B8A6]/20`}
+                >
+                  <input
+                    name="confirmPassword"
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    value={form.confirmPassword}
+                    onChange={handleChange}
+                    className="flex-1 outline-none text-base"
+                    placeholder="••••••••"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword((v) => !v)}
+                    className="ml-2 text-gray-400 hover:text-gray-600"
+                  >
+                    {showConfirmPassword ? <EyeOffIcon /> : <EyeIcon />}
+                  </button>
+                </div>
+                {errors.confirmPassword && (
+                  <p className="text-red-500 text-xs">{errors.confirmPassword}</p>
+                )}
+              </div>
+            </div>
+
+            {/* Fecha de nacimiento */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">Fecha de nacimiento</label>
+              <input
+                name="birthDate"
+                type="date"
+                value={form.birthDate}
+                onChange={handleChange}
+                className={`w-full border rounded-xl px-4 py-3 text-base transition-all
+                  ${errors.birthDate ? 'border-red-400' : 'border-gray-300 focus:border-[#14B8A6]'}
+                  focus:outline-none focus:ring-2 focus:ring-[#14B8A6]/20`}
+              />
+              {errors.birthDate && <p className="text-red-500 text-xs">{errors.birthDate}</p>}
+            </div>
+
+            {/* Botón Submit */}
+            <button
+              disabled={!allValid() || loading}
+              className="w-full h-13 bg-[#14B8A6] hover:bg-[#0F9B8E] text-white font-semibold rounded-xl shadow-md hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed text-base py-3.5 mt-2"
+            >
+              {loading ? 'Registrando...' : 'Crear cuenta'}
+            </button>
+
+            <div className="mt-4">
+              <OAuthLoginButton role="client" />
+            </div>
+
+            <div className="mt-6 flex flex-col items-center gap-3">
+              <Link
+                href="/register"
+                className="text-[#14B8A6] hover:text-[#0F9B8E] transition-colors text-sm font-medium"
+              >
+                ← Volver a selección de rol
+              </Link>
+              <p className="text-sm text-gray-600">
+                ¿Ya tienes cuenta?{' '}
+                <Link
+                  href="/login"
+                  className="text-[#14B8A6] font-semibold hover:text-[#0F9B8E] transition-colors"
+                >
+                  Inicia sesión aquí
+                </Link>
+              </p>
+            </div>
+          </form>
         </div>
-
-        {/* BOTÓN */}
-        <button
-          disabled={!allValid() || loading}
-          className="bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 disabled:opacity-60"
-        >
-          {loading ? "Registrando..." : "Registrarme"}
-        </button>
-
-        <div className="mt-4">
-          <OAuthLoginButton role="client" />
-        </div>
-      </form>
+      </div>
     </div>
   );
 }
