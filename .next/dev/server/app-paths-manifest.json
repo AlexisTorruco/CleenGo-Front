@@ -1,9 +1,7 @@
 {
-  "/_not-found/page": "app/_not-found/page.js",
+  "/client/profile/edit/page": "app/client/profile/edit/page.js",
   "/client/profile/page": "app/client/profile/page.js",
-  "/client/providers/page": "app/client/providers/page.js",
   "/login/page": "app/login/page.js",
-  "/page": "app/page.js",
-  "/register/client/page": "app/register/client/page.js",
-  "/register/page": "app/register/page.js"
+  "/oauth/callback/page": "app/oauth/callback/page.js",
+  "/page": "app/page.js"
 }
