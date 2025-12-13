@@ -23,7 +23,9 @@ import {
   Check,
   X,
   Bell,
+  FileText,
 } from 'lucide-react';
+import { calculateProfileCompleteness } from '../services/providerService';
 
 // ============================================
 // INTERFACES
@@ -34,14 +36,18 @@ interface UserProfile {
   birthDate: string;
   profileImgUrl: string;
   phone: string;
-  address?: string;
+  street?: string;
+  exteriorNumber?: string;
+  interiorNumber?: string;
+  neighborhood?: string;
   city?: string;
   state?: string;
-  country?: string;
   postalCode?: string;
+  fullAddress?: string;
+  country?: string;
   about?: string;
-  days?: string[]; // ← Agregar esta
-  hours?: string[]; // ← Agregar esta
+  days?: string[];
+  hours?: string[];
 }
 
 interface Appointment {
@@ -79,6 +85,7 @@ export default function ProviderDashboard() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [pendingAppointments, setPendingAppointments] = useState<Appointment[]>([]);
   const [processingId, setProcessingId] = useState<string | null>(null);
+  const [profileCompleteness, setProfileCompleteness] = useState(0);
 
   const [stats, setStats] = useState<DashboardStats>({
     completedServices: 0,
@@ -120,6 +127,11 @@ export default function ProviderDashboard() {
       const profileData = await profileRes.json();
       console.log('👤 Profile data loaded:', profileData);
       setProfile(profileData);
+
+      // Calcular completitud del perfil
+      const completeness = calculateProfileCompleteness(profileData);
+      setProfileCompleteness(completeness);
+      console.log(`📊 Profile completeness: ${completeness}%`);
 
       // Fetch appointments
       const appointmentsRes = await fetch(`${backendUrl}/appointments`, {
@@ -337,6 +349,74 @@ export default function ProviderDashboard() {
           ></div>
         </div>
 
+        {/* ALERTA DE PERFIL INCOMPLETO */}
+        {profileCompleteness < 100 && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="relative z-10 bg-gradient-to-r from-amber-50 to-orange-50 border-l-4 border-amber-500 rounded-xl p-6 mb-6 shadow-lg"
+          >
+            <div className="flex items-start gap-4">
+              <div className="flex-shrink-0 text-amber-600">
+                <AlertCircle className="w-8 h-8" />
+              </div>
+
+              <div className="flex-1">
+                <h3 className="text-lg font-bold text-amber-900 mb-2">⚠️ Perfil Incompleto</h3>
+
+                <p className="text-amber-800 mb-4">
+                  Tu perfil está <strong>{profileCompleteness}% completo</strong>. Para poder ser
+                  contratado y ofrecer tus servicios, necesitas completar tu información.
+                </p>
+
+                {/* Barra de progreso */}
+                <div className="mb-4">
+                  <div className="flex justify-between text-sm text-amber-700 mb-2">
+                    <span>Progreso del perfil</span>
+                    <span className="font-semibold">{profileCompleteness}%</span>
+                  </div>
+                  <div className="w-full bg-amber-200 rounded-full h-3 overflow-hidden">
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: `${profileCompleteness}%` }}
+                      transition={{ duration: 1, ease: 'easeOut' }}
+                      className="bg-gradient-to-r from-amber-500 to-orange-500 h-full rounded-full"
+                    />
+                  </div>
+                </div>
+
+                {/* Restricciones */}
+                <div className="bg-white/50 rounded-lg p-4 mb-4 space-y-2">
+                  <p className="text-sm text-amber-900 font-medium mb-2">
+                    🚫 Mientras tu perfil esté incompleto:
+                  </p>
+                  <ul className="space-y-1 text-sm text-amber-800">
+                    <li className="flex items-center gap-2">
+                      <span className="text-amber-500">•</span>
+                      No aparecerás en los resultados de búsqueda de clientes
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <span className="text-amber-500">•</span>
+                      Los clientes no podrán contratarte
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <span className="text-amber-500">•</span>
+                      Tu perfil no será visible públicamente
+                    </li>
+                  </ul>
+                </div>
+
+                <button
+                  onClick={() => router.push('/provider/edit-profile')}
+                  className="w-full sm:w-auto bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold px-6 py-3 rounded-xl shadow-md hover:shadow-lg transition-all"
+                >
+                  Completar Perfil Ahora
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
         {/* Header Section */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -355,11 +435,11 @@ export default function ProviderDashboard() {
                   <img
                     src={profile.profileImgUrl}
                     alt="Foto de perfil"
-                    className="relative w-24 h-24 rounded-full object-cover border-4 border-white"
+                    className="relative w-32 h-32 rounded-full object-cover border-4 border-white"
                   />
                 ) : (
-                  <div className="relative w-24 h-24 rounded-full bg-gradient-to-br from-blue-500 via-cyan-500 to-emerald-500 flex items-center justify-center border-4 border-white">
-                    <User className="w-12 h-12 text-white" />
+                  <div className="relative w-32 h-32 rounded-full bg-gradient-to-br from-blue-500 via-cyan-500 to-emerald-500 flex items-center justify-center border-4 border-white">
+                    <User className="w-16 h-16 text-white" />
                   </div>
                 )}
                 <div className="absolute -bottom-2 -right-2 bg-gradient-to-r from-emerald-500 to-green-500 rounded-full p-2 shadow-lg">
@@ -372,24 +452,30 @@ export default function ProviderDashboard() {
                 <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 via-cyan-600 to-emerald-600 bg-clip-text text-transparent mb-3">
                   {profile?.name} {profile?.surname}
                 </h1>
-                <div className="flex flex-col md:flex-row gap-4 text-gray-600 mb-4">
-                  <div className="flex items-center justify-center md:justify-start gap-2">
+                <div className="flex flex-col md:flex-row gap-3 text-gray-600">
+                  <div className="flex items-center gap-2 bg-blue-50/50 px-4 py-2 rounded-lg">
                     <Mail className="w-4 h-4 text-blue-600" />
-                    <span>{user?.email}</span>
+                    <span className="font-medium">{user?.email}</span>
                   </div>
                   {profile?.phone && (
-                    <div className="flex items-center justify-center md:justify-start gap-2">
+                    <div className="flex items-center gap-2 bg-cyan-50/50 px-4 py-2 rounded-lg">
                       <Phone className="w-4 h-4 text-cyan-600" />
-                      <span>{profile.phone}</span>
+                      <span className="font-medium">{profile.phone}</span>
                     </div>
                   )}
                 </div>
 
                 {/* About */}
                 {profile?.about && (
-                  <p className="text-gray-600 text-sm bg-blue-50/50 rounded-xl p-4 border border-blue-100">
-                    {profile.about}
-                  </p>
+                  <div className="mt-4">
+                    <h4 className="font-bold text-gray-900 mb-2 flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-blue-600" />
+                      Acerca de mí
+                    </h4>
+                    <p className="text-gray-600 text-sm bg-blue-50/50 rounded-xl p-4 border border-blue-100 leading-relaxed">
+                      {profile.about}
+                    </p>
+                  </div>
                 )}
               </div>
 
@@ -416,47 +502,10 @@ export default function ProviderDashboard() {
                   Editar
                 </motion.button>
               </div>
-
-              {/* Address Section */}
-              {profile?.address && (
-                <div className="flex items-start gap-3 text-gray-600 text-sm bg-purple-50/50 rounded-xl p-4 border border-purple-100 mt-4">
-                  <MapPin className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
-                  <div className="flex flex-col gap-2 text-left">
-                    <div>
-                      <span className="font-semibold text-gray-700">Dirección: </span>
-                      <span>{profile.address}</span>
-                    </div>
-                    {profile.city && (
-                      <div>
-                        <span className="font-semibold text-gray-700">Ciudad: </span>
-                        <span>{profile.city}</span>
-                      </div>
-                    )}
-                    {profile.state && (
-                      <div>
-                        <span className="font-semibold text-gray-700">Estado: </span>
-                        <span>{profile.state}</span>
-                      </div>
-                    )}
-                    {profile.country && (
-                      <div>
-                        <span className="font-semibold text-gray-700">País: </span>
-                        <span>{profile.country}</span>
-                      </div>
-                    )}
-                    {profile.postalCode && (
-                      <div>
-                        <span className="font-semibold text-gray-700">Código Postal: </span>
-                        <span>{profile.postalCode}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
             </div>
 
             {/* Availability */}
-            {profile?.days && profile.days.length > 0 && (
+            {profile?.days && profile.days.length > 0 ? (
               <div className="mt-6 pt-6 border-t border-gray-200">
                 <div className="flex flex-wrap gap-4">
                   <div className="flex items-center gap-2">
@@ -491,6 +540,83 @@ export default function ProviderDashboard() {
                       </div>
                     </>
                   )}
+                </div>
+              </div>
+            ) : (
+              <div className="mt-6 pt-6 border-t border-gray-200">
+                <div className="flex items-center gap-2 text-amber-600 bg-amber-50 px-4 py-3 rounded-lg">
+                  <AlertCircle className="w-5 h-5" />
+                  <span className="text-sm font-medium">
+                    Aún no has configurado tu disponibilidad
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Address */}
+            {(profile?.street || profile?.city || profile?.state || profile?.country) && (
+              <div className="mt-4 pt-4 border-t border-gray-200">
+                <div className="flex items-start gap-3 bg-purple-50/50 rounded-xl p-5 border border-purple-100">
+                  <MapPin className="w-6 h-6 text-purple-600 flex-shrink-0 mt-1" />
+                  <div className="flex-1">
+                    <h4 className="font-bold text-purple-900 mb-3 text-lg">Dirección</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                      {profile.street && (
+                        <div>
+                          <span className="font-semibold text-gray-700">Calle:</span>{' '}
+                          <span className="text-gray-600">{profile.street}</span>
+                        </div>
+                      )}
+                      {profile.exteriorNumber && (
+                        <div>
+                          <span className="font-semibold text-gray-700">Número:</span>{' '}
+                          <span className="text-gray-600">{profile.exteriorNumber}</span>
+                          {profile.interiorNumber && (
+                            <span className="text-gray-600">
+                              {' '}
+                              - Depto/Piso {profile.interiorNumber}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                      {profile.neighborhood && (
+                        <div>
+                          <span className="font-semibold text-gray-700">Barrio:</span>{' '}
+                          <span className="text-gray-600">{profile.neighborhood}</span>
+                        </div>
+                      )}
+                      {profile.city && (
+                        <div>
+                          <span className="font-semibold text-gray-700">Ciudad:</span>{' '}
+                          <span className="text-gray-600">{profile.city}</span>
+                        </div>
+                      )}
+                      {profile.state && (
+                        <div>
+                          <span className="font-semibold text-gray-700">Provincia:</span>{' '}
+                          <span className="text-gray-600">{profile.state}</span>
+                        </div>
+                      )}
+                      {profile.postalCode && (
+                        <div>
+                          <span className="font-semibold text-gray-700">Código Postal:</span>{' '}
+                          <span className="text-gray-600">{profile.postalCode}</span>
+                        </div>
+                      )}
+                      {profile.country && (
+                        <div>
+                          <span className="font-semibold text-gray-700">País:</span>{' '}
+                          <span className="text-gray-600">{profile.country}</span>
+                        </div>
+                      )}
+                    </div>
+                    {profile.fullAddress && (
+                      <div className="mt-3 pt-3 border-t border-purple-100">
+                        <span className="font-semibold text-gray-700">Dirección completa:</span>
+                        <p className="text-gray-600 mt-1">{profile.fullAddress}</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             )}
@@ -717,7 +843,6 @@ export default function ProviderDashboard() {
           transition={{ delay: 0.6 }}
           className="relative z-10 bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl border-2 border-white/50 p-8"
         >
-          {/* Section Header */}
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-3xl font-bold flex items-center gap-3">
               <div className="p-3 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-xl">

@@ -13,6 +13,7 @@ export default function Navbar() {
   const [isMounted, setIsMounted] = useState(false);
 
   // Marcamos cuando el componente ya se montó en el cliente
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     setIsMounted(true);
   }, []);
@@ -67,7 +68,11 @@ export default function Navbar() {
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 strokeWidth={2}
-                d={isOpen ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16M4 18h16"}
+                d={
+                  isOpen
+                    ? "M6 18L18 6M6 6l12 12"
+                    : "M4 6h16M4 12h16M4 18h16"
+                }
               />
             </svg>
           </button>
@@ -84,58 +89,45 @@ export default function Navbar() {
           {/* ------------------- */}
           {/* GUEST NAVBAR       */}
           {/* ------------------- */}
-          {!effectiveUser && (
+          {!effectiveUser ? (
             <div className="flex flex-col lg:flex-row lg:items-center lg:gap-6 gap-3 w-full">
-              <div className="h-10 w-20 bg-gray-200 animate-pulse rounded"></div>
-              <div className="h-10 w-24 bg-gray-200 animate-pulse rounded"></div>
-              <div className="h-10 w-24 bg-gray-200 animate-pulse rounded"></div>
-              <div className="h-10 w-20 bg-gray-200 animate-pulse rounded"></div>
-              <div className="h-10 w-32 bg-gray-200 animate-pulse rounded"></div>
+              <Link
+                href="/client/home"
+                onClick={handleMenuItemClick}
+                className="text-gray-700 font-medium hover:text-teal-500 transition"
+              >
+                Inicio
+              </Link>
+              <Link
+                href="/client/providers"
+                onClick={handleMenuItemClick}
+                className="text-gray-700 font-medium hover:text-teal-500 transition"
+              >
+                Proveedores
+              </Link>
+              <Link
+                href="/subscriptions"
+                onClick={handleMenuItemClick}
+                className="text-gray-700 font-medium hover:text-teal-500 transition"
+              >
+                Suscripción
+              </Link>
+              <Link
+                href="/blog"
+                onClick={handleMenuItemClick}
+                className="text-gray-700 font-medium hover:text-teal-500 transition"
+              >
+                Blog
+              </Link>
+              <Link
+                href="/login"
+                onClick={handleMenuItemClick}
+                className="bg-teal-500 text-white px-6 py-2.5 rounded-lg font-semibold hover:bg-teal-600 transition shadow-sm text-center"
+              >
+                Iniciar Sesión
+              </Link>
             </div>
-          ) : (
-            <>
-              {/* ------------------- */}
-              {/* GUEST NAVBAR       */}
-              {/* ------------------- */}
-              {!user && (
-                <div className="flex flex-col lg:flex-row lg:items-center lg:gap-6 gap-3 w-full">
-                  <Link
-                    href="/client/home"
-                    onClick={handleMenuItemClick}
-                    className="text-gray-700 font-medium hover:text-teal-500 transition"
-                  >
-                    Inicio
-                  </Link>
-                  <Link
-                    href="/client/providers"
-                    onClick={handleMenuItemClick}
-                    className="text-gray-700 font-medium hover:text-teal-500 transition"
-                  >
-                    Proveedores
-                  </Link>
-                  <Link
-                    href="/subscriptions"
-                    onClick={handleMenuItemClick}
-                    className="text-gray-700 font-medium hover:text-teal-500 transition"
-                  >
-                    Suscripción
-                  </Link>
-                  <Link
-                    href="/blog"
-                    onClick={handleMenuItemClick}
-                    className="text-gray-700 font-medium hover:text-teal-500 transition"
-                  >
-                    Blog
-                  </Link>
-                  <Link
-                    href="/login"
-                    onClick={handleMenuItemClick}
-                    className="bg-teal-500 text-white px-6 py-2.5 rounded-lg font-semibold hover:bg-teal-600 transition shadow-sm text-center"
-                  >
-                    Iniciar Sesión
-                  </Link>
-                </div>
-              )}
+          ) : null}
 
           {/* ------------------- */}
           {/* CLIENT NAVBAR       */}
