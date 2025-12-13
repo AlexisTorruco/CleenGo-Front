@@ -1,4 +1,13 @@
 {
+  "/_not-found/page": "app/_not-found/page.js",
   "/client/appointments/create/page": "app/client/appointments/create/page.js",
-  "/client/providers/page": "app/client/providers/page.js"
+  "/client/home/page": "app/client/home/page.js",
+  "/client/profile/edit/page": "app/client/profile/edit/page.js",
+  "/client/profile/page": "app/client/profile/page.js",
+  "/client/providers/page": "app/client/providers/page.js",
+  "/login/page": "app/login/page.js",
+  "/page": "app/page.js",
+  "/provider/dashboard/page": "app/provider/dashboard/page.js",
+  "/provider/edit-profile/page": "app/provider/edit-profile/page.js",
+  "/provider/profile/page": "app/provider/profile/page.js"
 }
