@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import Swal from 'sweetalert2';
-import ProviderFilters, { FilterData } from './components/ProviderFilters';
-import { useAuth } from '../../contexts/AuthContext';
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import Swal from "sweetalert2";
+import ProviderFilters, { FilterData } from "./components/ProviderFilters";
+import { useAuth } from "../../contexts/AuthContext";
 
 // 🔹 AJUSTADO PARA COINCIDIR CON EL BACK (Swagger)
 interface Provider {
@@ -45,25 +45,43 @@ export default function ProvidersPage() {
 
   const loadAllProviders = async () => {
     if (!backendUrl) {
-      console.error('❌ VITE_BACKEND_URL no está definido');
+      console.error("❌ VITE_BACKEND_URL no está definido");
+      Swal.fire({
+        icon: "error",
+        title: "Error de configuración",
+        text: "VITE_BACKEND_URL no está definido en el frontend.",
+        confirmButtonColor: "#22C55E",
+      });
       return;
     }
 
     setLoading(true);
     try {
+      console.log("➡️ Cargando proveedores desde:", `${backendUrl}provider`);
+
       const response = await fetch(`${backendUrl}/provider`);
-      if (!response.ok) throw new Error('Error al cargar proveedores');
+
+      if (!response.ok) {
+        console.error(
+          "❌ Error al cargar proveedores:",
+          response.status,
+          response.statusText
+        );
+        throw new Error(`Error al cargar proveedores: ${response.status}`);
+      }
 
       const data: Provider[] = await response.json();
+      console.log("✅ Proveedores obtenidos:", data);
+
       setProviders(data);
       setInitialLoad(false);
     } catch (err) {
-      console.error(err);
+      console.error("❌ Excepción al cargar proveedores:", err);
       Swal.fire({
-        icon: 'error',
-        title: 'Error',
-        text: 'No se pudieron cargar los proveedores',
-        confirmButtonColor: '#22C55E',
+        icon: "error",
+        title: "Error",
+        text: "No se pudieron cargar los proveedores",
+        confirmButtonColor: "#22C55E",
       });
     } finally {
       setLoading(false);
@@ -72,52 +90,66 @@ export default function ProvidersPage() {
 
   // Buscar con filtros (los reales del back)
   const handleSearch = async (filters: FilterData) => {
-    if (!backendUrl) return;
+    if (!backendUrl) {
+      console.error("❌ VITE_BACKEND_URL no está definido");
+      return;
+    }
 
     setLoading(true);
     try {
       const params = new URLSearchParams();
 
-      if (filters.date) params.append('date', filters.date);
-      filters.days.forEach((day) => params.append('day', day));
-      filters.hours.forEach((hour) => params.append('hour', hour));
-      filters.services.forEach((service) => params.append('services', service));
-      if (filters.rating > 0) params.append('rating', filters.rating.toString());
+      if (filters.date) params.append("date", filters.date);
+      filters.days.forEach((day) => params.append("day", day));
+      filters.hours.forEach((hour) => params.append("hour", hour));
+      filters.services.forEach((service) => params.append("services", service));
+      if (filters.rating > 0)
+        params.append("rating", filters.rating.toString());
 
-      const response = await fetch(`${backendUrl}provider/filter?${params.toString()}`);
+      const url = `${backendUrl}/provider/filter?${params.toString()}`;
+      console.log("➡️ Buscando proveedores con filtros en:", url);
+
+      const response = await fetch(url);
 
       if (!response.ok) {
-        throw new Error('Error al buscar proveedores');
+        console.error(
+          "❌ Error al buscar proveedores:",
+          response.status,
+          response.statusText
+        );
+        throw new Error("Error al buscar proveedores");
       }
 
       const data: Provider[] = await response.json();
+      console.log("✅ Proveedores filtrados:", data);
+
       setProviders(data);
 
       if (data.length > 0) {
         Swal.fire({
-          icon: 'success',
-          title: '¡Proveedores encontrados!',
+          icon: "success",
+          title: "¡Proveedores encontrados!",
           text: `Se encontraron ${data.length} proveedor${
-            data.length !== 1 ? 'es' : ''
-          } disponible${data.length !== 1 ? 's' : ''}`,
+            data.length !== 1 ? "es" : ""
+          } disponible${data.length !== 1 ? "s" : ""}`,
           timer: 2000,
           showConfirmButton: false,
         });
       } else {
         Swal.fire({
-          icon: 'info',
-          title: 'Sin resultados',
-          text: 'No se encontraron proveedores con esos filtros',
-          confirmButtonColor: '#22C55E',
+          icon: "info",
+          title: "Sin resultados",
+          text: "No se encontraron proveedores con esos filtros",
+          confirmButtonColor: "#22C55E",
         });
       }
     } catch (err) {
-      console.error(err);
+      console.error("❌ Excepción al buscar proveedores:", err);
       Swal.fire({
-        icon: 'error',
-        title: 'Error',
-        text: 'Hubo un error al buscar proveedores',
-        confirmButtonColor: '#22C55E',
+        icon: "error",
+        title: "Error",
+        text: "Hubo un error al buscar proveedores",
+        confirmButtonColor: "#22C55E",
       });
     } finally {
       setLoading(false);
@@ -133,32 +165,31 @@ export default function ProvidersPage() {
   const handleBookAppointment = (providerId: string, providerName: string) => {
     if (!user) {
       Swal.fire({
-        icon: 'warning',
-        title: 'Inicia sesión',
-        text: 'Debes iniciar sesión para agendar una cita',
+        icon: "warning",
+        title: "Inicia sesión",
+        text: "Debes iniciar sesión para agendar una cita",
         showCancelButton: true,
-        confirmButtonText: 'Iniciar sesión',
-        cancelButtonText: 'Cancelar',
-        confirmButtonColor: '#22C55E',
-        cancelButtonColor: '#6B7280',
+        confirmButtonText: "Iniciar sesión",
+        cancelButtonText: "Cancelar",
+        confirmButtonColor: "#22C55E",
+        cancelButtonColor: "#6B7280",
       }).then((result) => {
         if (result.isConfirmed) {
-          router.push('/login');
+          router.push("/login");
         }
       });
     } else {
       Swal.fire({
-        icon: 'question',
+        icon: "question",
         title: `¿Agendar cita con ${providerName}?`,
-        text: 'Serás redirigido para completar tu reserva',
+        text: "Serás redirigido para completar tu reserva",
         showCancelButton: true,
-        confirmButtonText: 'Continuar',
-        cancelButtonText: 'Cancelar',
-        confirmButtonColor: '#22C55E',
-        cancelButtonColor: '#6B7280',
+        confirmButtonText: "Continuar",
+        cancelButtonText: "Cancelar",
+        confirmButtonColor: "#22C55E",
+        cancelButtonColor: "#6B7280",
       }).then((result) => {
         if (result.isConfirmed) {
-          // 👇 AQUÍ ES DONDE CAMBIA
           router.push(
             `/client/appointments/create?providerId=${providerId}&providerName=${encodeURIComponent(
               providerName
@@ -177,7 +208,9 @@ export default function ProvidersPage() {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8 text-center">
-          <h1 className="text-4xl lg:text-5xl font-bold text-white mb-3">Nuestros Proveedores</h1>
+          <h1 className="text-4xl lg:text-5xl font-bold text-white mb-3">
+            Nuestros Proveedores
+          </h1>
           <p className="text-lg text-white/90">
             Profesionales verificados y calificados por nuestra comunidad
           </p>
@@ -193,10 +226,10 @@ export default function ProvidersPage() {
             >
               <span>Filtros avanzados</span>
               <span className="flex items-center gap-1 text-xs text-gray-500">
-                {isMobileFiltersOpen ? 'Ocultar' : 'Mostrar'}
+                {isMobileFiltersOpen ? "Ocultar" : "Mostrar"}
                 <svg
                   className={`w-4 h-4 transition-transform ${
-                    isMobileFiltersOpen ? 'rotate-180' : ''
+                    isMobileFiltersOpen ? "rotate-180" : ""
                   }`}
                   fill="none"
                   stroke="currentColor"
@@ -226,7 +259,9 @@ export default function ProvidersPage() {
 
         {/* Layout principal */}
         <div
-          className={`grid gap-6 ${showFilters ? 'lg:grid-cols-[340px_1fr]' : 'lg:grid-cols-1'}`}
+          className={`grid gap-6 ${
+            showFilters ? "lg:grid-cols-[340px_1fr]" : "lg:grid-cols-1"
+          }`}
         >
           {/* Sidebar filtros desktop */}
           {showFilters && (
@@ -279,8 +314,8 @@ export default function ProvidersPage() {
                 <div className="bg-white/95 rounded-xl px-4 py-2 mb-5 shadow-md flex items-center justify-between text-sm">
                   <span className="text-gray-700 font-medium">
                     {providers.length} proveedor
-                    {providers.length !== 1 ? 'es' : ''} disponible
-                    {providers.length !== 1 ? 's' : ''}
+                    {providers.length !== 1 ? "es" : ""} disponible
+                    {providers.length !== 1 ? "s" : ""}
                   </span>
                 </div>
 
@@ -289,17 +324,17 @@ export default function ProvidersPage() {
                   {providers.map((provider) => {
                     // Imagen del provider (back) + fallback
                     const imageUrl = provider.profileImgUrl
-                      ? provider.profileImgUrl.startsWith('http')
+                      ? provider.profileImgUrl.startsWith("http")
                         ? provider.profileImgUrl
                         : backendUrl
-                        ? `${backendUrl}uploads/${provider.profileImgUrl}`
+                        ? `${backendUrl}/uploads/${provider.profileImgUrl}`
                         : provider.profileImgUrl
                       : null;
 
                     // Descripción corta
                     const description =
                       provider.about ||
-                      'Cuento con experiencia en limpieza y mantenimiento residencial y comercial.';
+                      "Cuento con experiencia en limpieza y mantenimiento residencial y comercial.";
 
                     return (
                       <div
@@ -321,7 +356,8 @@ export default function ProvidersPage() {
                                 </div>
                               ) : (
                                 <div className="w-16 h-16 rounded-full bg-[#22C55E] flex items-center justify-center text-white font-bold text-xl shadow-md">
-                                  {provider.name?.charAt(0)?.toUpperCase() ?? '?'}
+                                  {provider.name?.charAt(0)?.toUpperCase() ??
+                                    "?"}
                                 </div>
                               )}
                             </div>
@@ -349,14 +385,17 @@ export default function ProvidersPage() {
                               </div>
 
                               {/* Servicios / tags (simulados por ahora) */}
-                              {provider.services && provider.services.length > 0 && (
-                                <p className="text-xs text-[#0A65FF] font-medium mb-1 truncate">
-                                  {provider.services.join(' · ')}
-                                </p>
-                              )}
+                              {provider.services &&
+                                provider.services.length > 0 && (
+                                  <p className="text-xs text-[#0A65FF] font-medium mb-1 truncate">
+                                    {provider.services.join(" · ")}
+                                  </p>
+                                )}
 
                               {/* Descripción */}
-                              <p className="text-sm text-gray-600 line-clamp-2">{description}</p>
+                              <p className="text-sm text-gray-600 line-clamp-2">
+                                {description}
+                              </p>
                             </div>
                           </div>
 
@@ -414,7 +453,10 @@ export default function ProvidersPage() {
                           {/* CTA */}
                           <button
                             onClick={() =>
-                              handleBookAppointment(provider.id.toString(), provider.name)
+                              handleBookAppointment(
+                                provider.id.toString(),
+                                provider.name
+                              )
                             }
                             className="w-full bg-[#22C55E] text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-[#16A34A] transition-colors mt-1"
                           >
