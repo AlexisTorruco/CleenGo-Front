@@ -2,6 +2,22 @@
 
 import { http } from "./http";
 
+// --------- Tipos base ---------
+export interface User {
+  id: string;
+  name: string;
+  surname: string;
+  email: string;
+  birthDate: string;
+  role: string;
+}
+
+export interface Provider extends User {
+  days?: string[];
+  hours?: string[];
+  about?: string;
+}
+
 // --------- Tipos para registro normal ---------
 export interface RegisterClientRequest {
   name: string;
@@ -10,13 +26,12 @@ export interface RegisterClientRequest {
   password: string;
   confirmPassword: string;
   birthDate: string;
-  profileImgUrl?: string;
-  phone: string;
+
 }
 
 export interface RegisterClientResponse {
   message: string;
-  user: any;
+  user: User;
   token?: string; // por si el backend devuelve token al registrar
 }
 
@@ -27,18 +42,11 @@ export interface RegisterProviderRequest {
   password: string;
   confirmPassword: string;
   birthDate: string;
-  profileImgUrl?: string;
-  phone: string;
-
-  // Campos específicos del provider:
-  days: string[];  
-  hours: string[];  
-  about: string;    
 }
 
 export interface RegisterProviderResponse {
   message: string;
-  provider: any;
+  provider: Provider;
   token?: string;
 }
 
@@ -52,7 +60,7 @@ export interface LoginRequest {
 export interface LoginResponse {
   message: string;
   accessToken: string;
-  user: any;
+  user: User;
 }
 
 // --------- Tipos para login por terceros (OAuth) ---------
@@ -67,7 +75,7 @@ export interface ThirdPartyLoginRequest {
 export interface ThirdPartyLoginResponse {
   message: string;
   accessToken: string;
-  user: any;
+  user: User;
 }
 
 // --------- Servicios ---------

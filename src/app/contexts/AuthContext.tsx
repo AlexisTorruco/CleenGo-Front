@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { User as AuthUser } from '../services/auth';
 
 interface User {
   id: string;
@@ -14,7 +15,7 @@ interface User {
 interface AuthContextType {
   user: User | null;
   token: string | null;
-  login: (user: Record<string, unknown>, token: string) => void;
+  login: (user: AuthUser | Record<string, unknown>, token: string) => void;
   logout: () => void;
 }
 
@@ -65,7 +66,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
-  const login = (rawUser: Record<string, unknown>, token: string) => {
+  const login = (rawUser: AuthUser | Record<string, unknown>, token: string) => {
     // Validar y normalizar el rol
     const validRoles = ['client', 'provider'];
     const role = validRoles.includes(String(rawUser.role)) ? String(rawUser.role) : 'client';
@@ -73,9 +74,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const normalizedUser: User = {
       id: String(rawUser.id),
       email: String(rawUser.email),
-      name: String(rawUser.name || rawUser.full_name || ''),
+      name: String(rawUser.name || (rawUser as Record<string, unknown>).full_name || ''),
       surname: String(rawUser.surname || ''),
-      profileImgUrl: String(rawUser.profileImgUrl || rawUser.avatar_url || ''),
       role: role as 'client' | 'provider',
     };
 
