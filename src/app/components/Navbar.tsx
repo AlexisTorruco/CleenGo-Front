@@ -106,36 +106,6 @@ export default function Navbar() {
                 </svg>
                 <span className="absolute -top-2 -right-2 bg-teal-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">0</span>
               </Link>
-
-              <Link
-                href="/blog"
-                onClick={handleMenuItemClick}
-                className="text-gray-700 font-medium hover:text-teal-500 transition text-center"
-              >
-                Blog
-              </Link>
-              <Link
-                href="/client/appointments"
-                onClick={handleMenuItemClick}
-                className="relative text-gray-700 hover:text-teal-500 transition text-center"
-              >
-                <svg
-                  className="w-6 h-6 mx-auto"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"
-                  />
-                </svg>
-                <span className="absolute -top-2 -right-2 bg-teal-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
-                  0
-                </span>
-              </Link>
               <Link
                 href="/client/profile"
                 onClick={handleMenuItemClick}
@@ -184,6 +154,36 @@ export default function Navbar() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
                 </svg>
               </Link>
+
+              <Link href="/provider/profile" onClick={handleMenuItemClick} className="text-gray-700 hover:text-teal-500 transition">
+                <svg className="w-6 h-6 mx-auto" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd"/>
+                </svg>
+              </Link>
+
+              <span className="text-gray-700 font-medium">¡Hola, <span className="text-teal-500 font-semibold">{user.name}</span>!</span>
+
+              <button onClick={handleLogout} className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg font-medium hover:bg-gray-200 transition">Cerrar sesión</button>
+            </div>
+          )}
+
+          {/* ------------------- */}
+          {/* ADMIN NAVBAR       */}
+          {/* ------------------- */}
+          {user && role === 'admin' && (
+            <div className="flex flex-col lg:flex-row lg:items-center lg:gap-6 gap-3 w-full">
+              <Link href="/client/home" onClick={handleMenuItemClick} className="text-gray-700 font-medium hover:text-teal-500 transition">Inicio</Link>
+
+              <Link href="/client/providers" onClick={handleMenuItemClick} className="text-gray-700 font-medium hover:text-teal-500 transition">Proveedores</Link>
+
+              <Link href="/blog" onClick={handleMenuItemClick} className="text-gray-700 font-medium hover:text-teal-500 transition">Blog</Link>
+
+              <Link href="/client/appointments" onClick={handleMenuItemClick} className="relative text-gray-700 hover:text-teal-500 transition">
+                <svg className="w-6 h-6 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
+                </svg>
+                <span className="absolute -top-2 -right-2 bg-teal-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">0</span>
+              </Link>
               <Link
                 href="/provider/profile"
                 onClick={handleMenuItemClick}
@@ -214,36 +214,6 @@ export default function Navbar() {
               >
                 Cerrar sesión
               </button>
-            </div>
-          )}
-
-          {/* ------------------- */}
-          {/* ADMIN NAVBAR       */}
-          {/* ------------------- */}
-          {user && role === 'admin' && (
-            <div className="flex flex-col lg:flex-row lg:items-center lg:gap-6 gap-3 w-full">
-              <Link href="/client/home" onClick={handleMenuItemClick} className="text-gray-700 font-medium hover:text-teal-500 transition">Inicio</Link>
-
-              <Link href="/client/providers" onClick={handleMenuItemClick} className="text-gray-700 font-medium hover:text-teal-500 transition">Proveedores</Link>
-
-              <Link href="/blog" onClick={handleMenuItemClick} className="text-gray-700 font-medium hover:text-teal-500 transition">Blog</Link>
-
-              <Link href="/client/appointments" onClick={handleMenuItemClick} className="relative text-gray-700 hover:text-teal-500 transition">
-                <svg className="w-6 h-6 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
-                </svg>
-                <span className="absolute -top-2 -right-2 bg-teal-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">0</span>
-              </Link>
-
-              <Link href="/admin/dashboard" onClick={handleMenuItemClick} className="text-gray-700 hover:text-teal-500 transition">
-                <svg className="w-6 h-6 mx-auto" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd"/>
-                </svg>
-              </Link>
-
-              <span className="text-gray-700 font-medium">¡Hola, <span className="text-teal-500 font-semibold">{user.name}</span>!</span>
-
-              <button onClick={handleLogout} className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg font-medium hover:bg-gray-200 transition">Cerrar Sesión</button>
             </div>
           )}
 
