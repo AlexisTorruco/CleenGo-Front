@@ -20,6 +20,8 @@ import {
   FileText,
   Clock,
   CalendarDays,
+  MapPin,
+  Home,
 } from 'lucide-react';
 
 // ============================================
@@ -35,6 +37,14 @@ interface ProviderProfileForm {
   about: string;
   days: string[];
   hours: string[];
+  // Campos de dirección
+  street: string;
+  exteriorNumber: string;
+  interiorNumber: string;
+  neighborhood: string;
+  city: string;
+  state: string;
+  postalCode: string;
 }
 
 const DAYS_OF_WEEK = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
@@ -87,6 +97,13 @@ export default function EditProfileProvider() {
     about: '',
     days: [],
     hours: [],
+    street: '',
+    exteriorNumber: '',
+    interiorNumber: '',
+    neighborhood: '',
+    city: '',
+    state: '',
+    postalCode: '',
   });
 
   useEffect(() => {
@@ -139,6 +156,13 @@ export default function EditProfileProvider() {
         about: data.about || '',
         days: data.days || [],
         hours: data.hours || [],
+        street: data.street || '',
+        exteriorNumber: data.exteriorNumber || '',
+        interiorNumber: data.interiorNumber || '',
+        neighborhood: data.neighborhood || '',
+        city: data.city || '',
+        state: data.state || '',
+        postalCode: data.postalCode || '',
       });
     } catch (err) {
       console.error('Error fetching profile:', err);
@@ -271,6 +295,13 @@ export default function EditProfileProvider() {
         about: formData.about,
         days: formData.days,
         hours: formData.hours,
+        street: formData.street,
+        exteriorNumber: formData.exteriorNumber,
+        interiorNumber: formData.interiorNumber,
+        neighborhood: formData.neighborhood,
+        city: formData.city,
+        state: formData.state,
+        postalCode: formData.postalCode,
       };
 
       if (formData.profileImgUrl && formData.profileImgUrl.trim() !== '') {
@@ -583,7 +614,7 @@ export default function EditProfileProvider() {
                     value={formData.phone}
                     onChange={handleChange}
                     className="w-full px-5 py-4 border-2 border-gray-200 rounded-2xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all bg-white/50 backdrop-blur-sm text-gray-900"
-                    placeholder="+52 123 456 7890"
+                    placeholder="+54 264 123 4567"
                   />
                 </div>
 
@@ -603,11 +634,136 @@ export default function EditProfileProvider() {
               </div>
             </motion.div>
 
-            {/* About Section */}
+            {/* Address Section */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4 }}
+              className="pt-8 border-t-2 border-gray-200"
+            >
+              <div className="flex items-center gap-3 mb-6">
+                <div className="p-3 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl shadow-lg">
+                  <MapPin className="w-6 h-6 text-white" />
+                </div>
+                <h3 className="text-2xl font-bold text-gray-900">Dirección</h3>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-3">
+                    <Home className="w-4 h-4 text-purple-600" />
+                    Calle *
+                  </label>
+                  <input
+                    type="text"
+                    name="street"
+                    value={formData.street}
+                    onChange={handleChange}
+                    required
+                    className="w-full px-5 py-4 border-2 border-gray-200 rounded-2xl focus:ring-4 focus:ring-purple-100 focus:border-purple-500 transition-all bg-white/50 backdrop-blur-sm text-gray-900"
+                    placeholder="Av. Libertador San Martín"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-3">
+                      Número de casa *
+                    </label>
+                    <input
+                      type="text"
+                      name="exteriorNumber"
+                      value={formData.exteriorNumber}
+                      onChange={handleChange}
+                      required
+                      className="w-full px-5 py-4 border-2 border-gray-200 rounded-2xl focus:ring-4 focus:ring-purple-100 focus:border-purple-500 transition-all bg-white/50 backdrop-blur-sm text-gray-900"
+                      placeholder="1234"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-3">
+                      Depto/Piso
+                    </label>
+                    <input
+                      type="text"
+                      name="interiorNumber"
+                      value={formData.interiorNumber}
+                      onChange={handleChange}
+                      className="w-full px-5 py-4 border-2 border-gray-200 rounded-2xl focus:ring-4 focus:ring-purple-100 focus:border-purple-500 transition-all bg-white/50 backdrop-blur-sm text-gray-900"
+                      placeholder="3B"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-3">
+                    Barrio *
+                  </label>
+                  <input
+                    type="text"
+                    name="neighborhood"
+                    value={formData.neighborhood}
+                    onChange={handleChange}
+                    required
+                    className="w-full px-5 py-4 border-2 border-gray-200 rounded-2xl focus:ring-4 focus:ring-purple-100 focus:border-purple-500 transition-all bg-white/50 backdrop-blur-sm text-gray-900"
+                    placeholder="Palermo"
+                  />
+                </div>
+
+                <div>
+                  <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-3">
+                    Ciudad *
+                  </label>
+                  <input
+                    type="text"
+                    name="city"
+                    value={formData.city}
+                    onChange={handleChange}
+                    required
+                    className="w-full px-5 py-4 border-2 border-gray-200 rounded-2xl focus:ring-4 focus:ring-purple-100 focus:border-purple-500 transition-all bg-white/50 backdrop-blur-sm text-gray-900"
+                    placeholder="San Juan"
+                  />
+                </div>
+
+                <div>
+                  <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-3">
+                    Provincia *
+                  </label>
+                  <input
+                    type="text"
+                    name="state"
+                    value={formData.state}
+                    onChange={handleChange}
+                    required
+                    className="w-full px-5 py-4 border-2 border-gray-200 rounded-2xl focus:ring-4 focus:ring-purple-100 focus:border-purple-500 transition-all bg-white/50 backdrop-blur-sm text-gray-900"
+                    placeholder="San Juan"
+                  />
+                </div>
+
+                <div>
+                  <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-3">
+                    Código Postal *
+                  </label>
+                  <input
+                    type="text"
+                    name="postalCode"
+                    value={formData.postalCode}
+                    onChange={handleChange}
+                    required
+                    maxLength={8}
+                    className="w-full px-5 py-4 border-2 border-gray-200 rounded-2xl focus:ring-4 focus:ring-purple-100 focus:border-purple-500 transition-all bg-white/50 backdrop-blur-sm text-gray-900"
+                    placeholder="J5400"
+                  />
+                </div>
+              </div>
+            </motion.div>
+
+            {/* About Section */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5 }}
               className="pt-8 border-t-2 border-gray-200"
             >
               <div className="flex items-center gap-3 mb-6">
@@ -631,7 +787,7 @@ export default function EditProfileProvider() {
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5 }}
+              transition={{ delay: 0.6 }}
               className="pt-8 border-t-2 border-gray-200"
             >
               <div className="flex items-center gap-3 mb-6">
@@ -693,7 +849,7 @@ export default function EditProfileProvider() {
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.6 }}
+              transition={{ delay: 0.7 }}
               className="flex flex-col sm:flex-row gap-4 pt-8"
             >
               <motion.button

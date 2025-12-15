@@ -1,7 +1,7 @@
-//src/app/components/ProviderDashboard.tsx
+// src/app/components/ProviderDashboard.tsx
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
@@ -26,7 +26,10 @@ import {
   Bell,
   ShoppingCart,
   MessageCircle,
+  FileText,
 } from "lucide-react";
+
+import { calculateProfileCompleteness } from "../services/providerService";
 
 // ============================================
 // TIPOS (alineados a tu JSON REAL)
@@ -76,11 +79,15 @@ interface UserProfile {
   birthDate: string;
   profileImgUrl: string;
   phone: string;
-  address?: string;
+  street?: string;
+  exteriorNumber?: string;
+  interiorNumber?: string;
+  neighborhood?: string;
   city?: string;
   state?: string;
-  country?: string;
   postalCode?: string;
+  fullAddress?: string;
+  country?: string;
   about?: string;
   days?: string[];
   hours?: string[];
@@ -108,7 +115,9 @@ export default function ProviderDashboard() {
   const router = useRouter();
 
   const backendUrl =
-    process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3000";
+    process.env.NEXT_PUBLIC_BACKEND_URL ||
+    process.env.VITE_BACKEND_URL ||
+    "http://localhost:3000";
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -124,6 +133,9 @@ export default function ProviderDashboard() {
 
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabKey>("jobs");
+
+  // ✅ feature extra: completitud perfil (de tu compa)
+  const [profileCompleteness, setProfileCompleteness] = useState(100);
 
   // ✅ unread por cita
   const [unreadByAppointment, setUnreadByAppointment] = useState<
@@ -166,13 +178,27 @@ export default function ProviderDashboard() {
   const isPending = (a: Appointment) =>
     normalizeStatus(a.status).includes("pending");
   const isConfirmed = (a: Appointment) =>
-    normalizeStatus(a.status).includes("confirmedprovider");
+    normalizeStatus(a.status).includes("confirmedprovider") ||
+    normalizeStatus(a.status).includes("confirmed");
   const isCompleted = (a: Appointment) =>
     normalizeStatus(a.status).includes("completed");
 
   const money = (price?: string | null) => {
     const n = Number(price ?? 0);
     return Number.isFinite(n) ? n : 0;
+  };
+
+  const translateDay = (day: string) => {
+    const translations: Record<string, string> = {
+      Monday: "Lunes",
+      Tuesday: "Martes",
+      Wednesday: "Miércoles",
+      Thursday: "Jueves",
+      Friday: "Viernes",
+      Saturday: "Sábado",
+      Sunday: "Domingo",
+    };
+    return translations[day] || day;
   };
 
   // =========================
@@ -206,6 +232,16 @@ export default function ProviderDashboard() {
       const profileData = await profileRes.json();
       setProfile(profileData);
 
+      // ✅ completitud (de tu compa) sin romper lo tuyo
+      try {
+        const completeness = calculateProfileCompleteness(profileData);
+        setProfileCompleteness(
+          typeof completeness === "number" ? completeness : 100
+        );
+      } catch {
+        setProfileCompleteness(100);
+      }
+
       // Appointments del usuario autenticado
       const appointmentsRes = await fetch(`${backendUrl}/appointments`, {
         headers: {
@@ -236,7 +272,7 @@ export default function ProviderDashboard() {
       setProviderAppointments(p);
       setClientAppointments(c);
 
-      // Tab default inteligente
+      // Tab default inteligente (tu lógica)
       if (p.some((a) => isPending(a))) setActiveTab("requests");
       else setActiveTab("jobs");
     } catch (err) {
@@ -313,12 +349,10 @@ export default function ProviderDashboard() {
     }
   }, [backendUrl, clientAppointments, providerAppointments, token, user?.id]);
 
-  // al cargar citas, refresca
   useEffect(() => {
     refreshUnreadByAppointment();
   }, [refreshUnreadByAppointment]);
 
-  // polling liviano
   useEffect(() => {
     if (!token) return;
     const id = window.setInterval(() => refreshUnreadByAppointment(), 6000);
@@ -399,9 +433,6 @@ export default function ProviderDashboard() {
     };
   }, [providerAppointments]);
 
-  // =========================
-  // UI STATES
-  // =========================
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-emerald-50 flex items-center justify-center">
@@ -447,7 +478,92 @@ export default function ProviderDashboard() {
   // =========================
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-cyan-50 to-emerald-50 pt-24 pb-12 px-4">
+      {/* Animated Background Blobs (de tu compa, no rompe nada) */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-blue-300/20 rounded-full blur-3xl animate-pulse"></div>
+        <div
+          className="absolute bottom-0 left-0 w-96 h-96 bg-emerald-300/20 rounded-full blur-3xl animate-pulse"
+          style={{ animationDelay: "1s" }}
+        ></div>
+        <div
+          className="absolute top-1/2 left-1/2 w-96 h-96 bg-cyan-300/20 rounded-full blur-3xl animate-pulse"
+          style={{ animationDelay: "2s" }}
+        ></div>
+      </div>
+
       <div className="max-w-7xl mx-auto">
+        {/* ALERTA DE PERFIL INCOMPLETO */}
+        {profileCompleteness < 100 && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="relative z-10 bg-gradient-to-r from-amber-50 to-orange-50 border-l-4 border-amber-500 rounded-xl p-6 mb-6 shadow-lg"
+          >
+            <div className="flex items-start gap-4">
+              <div className="flex-shrink-0 text-amber-600">
+                <AlertCircle className="w-8 h-8" />
+              </div>
+
+              <div className="flex-1">
+                <h3 className="text-lg font-bold text-amber-900 mb-2">
+                  ⚠️ Perfil Incompleto
+                </h3>
+
+                <p className="text-amber-800 mb-4">
+                  Tu perfil está{" "}
+                  <strong>{profileCompleteness}% completo</strong>. Para poder
+                  ser contratado y ofrecer tus servicios, completa tu
+                  información.
+                </p>
+
+                <div className="mb-4">
+                  <div className="flex justify-between text-sm text-amber-700 mb-2">
+                    <span>Progreso del perfil</span>
+                    <span className="font-semibold">
+                      {profileCompleteness}%
+                    </span>
+                  </div>
+                  <div className="w-full bg-amber-200 rounded-full h-3 overflow-hidden">
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: `${profileCompleteness}%` }}
+                      transition={{ duration: 1, ease: "easeOut" }}
+                      className="bg-gradient-to-r from-amber-500 to-orange-500 h-full rounded-full"
+                    />
+                  </div>
+                </div>
+
+                <div className="bg-white/50 rounded-lg p-4 mb-4 space-y-2">
+                  <p className="text-sm text-amber-900 font-medium mb-2">
+                    🚫 Mientras tu perfil esté incompleto:
+                  </p>
+                  <ul className="space-y-1 text-sm text-amber-800">
+                    <li className="flex items-center gap-2">
+                      <span className="text-amber-500">•</span>
+                      Podrías no aparecer en resultados de búsqueda
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <span className="text-amber-500">•</span>
+                      Los clientes pueden no contratarte
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <span className="text-amber-500">•</span>
+                      Tu perfil podría no verse completo públicamente
+                    </li>
+                  </ul>
+                </div>
+
+                <button
+                  onClick={() => router.push("/provider/edit-profile")}
+                  className="w-full sm:w-auto bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold px-6 py-3 rounded-xl shadow-md hover:shadow-lg transition-all"
+                >
+                  Completar Perfil Ahora
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -465,11 +581,11 @@ export default function ProviderDashboard() {
                   <img
                     src={profile.profileImgUrl}
                     alt="Foto de perfil"
-                    className="relative w-24 h-24 rounded-full object-cover border-4 border-white"
+                    className="relative w-32 h-32 rounded-full object-cover border-4 border-white"
                   />
                 ) : (
-                  <div className="relative w-24 h-24 rounded-full bg-gradient-to-br from-blue-500 via-cyan-500 to-emerald-500 flex items-center justify-center border-4 border-white">
-                    <User className="w-12 h-12 text-white" />
+                  <div className="relative w-32 h-32 rounded-full bg-gradient-to-br from-blue-500 via-cyan-500 to-emerald-500 flex items-center justify-center border-4 border-white">
+                    <User className="w-16 h-16 text-white" />
                   </div>
                 )}
                 <div className="absolute -bottom-2 -right-2 bg-gradient-to-r from-emerald-500 to-green-500 rounded-full p-2 shadow-lg">
@@ -481,23 +597,31 @@ export default function ProviderDashboard() {
                 <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 via-cyan-600 to-emerald-600 bg-clip-text text-transparent mb-3">
                   {profile?.name} {profile?.surname}
                 </h1>
-                <div className="flex flex-col md:flex-row gap-4 text-gray-600 mb-4">
-                  <div className="flex items-center justify-center md:justify-start gap-2">
+
+                <div className="flex flex-col md:flex-row gap-3 text-gray-600">
+                  <div className="flex items-center gap-2 bg-blue-50/50 px-4 py-2 rounded-lg">
                     <Mail className="w-4 h-4 text-blue-600" />
-                    <span>{user?.email}</span>
+                    <span className="font-medium">{user?.email}</span>
                   </div>
+
                   {profile?.phone && (
-                    <div className="flex items-center justify-center md:justify-start gap-2">
+                    <div className="flex items-center gap-2 bg-cyan-50/50 px-4 py-2 rounded-lg">
                       <Phone className="w-4 h-4 text-cyan-600" />
-                      <span>{profile.phone}</span>
+                      <span className="font-medium">{profile.phone}</span>
                     </div>
                   )}
                 </div>
 
                 {profile?.about && (
-                  <p className="text-gray-600 text-sm bg-blue-50/50 rounded-xl p-4 border border-blue-100">
-                    {profile.about}
-                  </p>
+                  <div className="mt-4">
+                    <h4 className="font-bold text-gray-900 mb-2 flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-blue-600" />
+                      Acerca de mí
+                    </h4>
+                    <p className="text-gray-600 text-sm bg-blue-50/50 rounded-xl p-4 border border-blue-100 leading-relaxed">
+                      {profile.about}
+                    </p>
+                  </div>
                 )}
               </div>
 
@@ -526,6 +650,163 @@ export default function ProviderDashboard() {
                 </motion.button>
               </div>
             </div>
+
+            {/* Availability */}
+            {profile?.days && profile.days.length > 0 ? (
+              <div className="mt-6 pt-6 border-t border-gray-200">
+                <div className="flex flex-wrap gap-4">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-5 h-5 text-blue-600" />
+                    <span className="font-semibold text-gray-700">
+                      Disponibilidad:
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {profile.days.map((day) => (
+                      <span
+                        key={day}
+                        className="px-3 py-1 bg-gradient-to-r from-blue-100 to-cyan-100 text-blue-700 rounded-full text-sm font-medium"
+                      >
+                        {translateDay(day)}
+                      </span>
+                    ))}
+                  </div>
+
+                  {profile.hours && profile.hours.length > 0 && (
+                    <>
+                      <div className="flex items-center gap-2 ml-4">
+                        <Clock className="w-5 h-5 text-emerald-600" />
+                        <span className="font-semibold text-gray-700">
+                          Horario:
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {profile.hours.map((hour) => (
+                          <span
+                            key={hour}
+                            className="px-3 py-1 bg-gradient-to-r from-emerald-100 to-green-100 text-emerald-700 rounded-full text-sm font-medium"
+                          >
+                            {hour}
+                          </span>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="mt-6 pt-6 border-t border-gray-200">
+                <div className="flex items-center gap-2 text-amber-600 bg-amber-50 px-4 py-3 rounded-lg">
+                  <AlertCircle className="w-5 h-5" />
+                  <span className="text-sm font-medium">
+                    Aún no has configurado tu disponibilidad
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Address */}
+            {(profile?.street ||
+              profile?.city ||
+              profile?.state ||
+              profile?.country) && (
+              <div className="mt-4 pt-4 border-t border-gray-200">
+                <div className="flex items-start gap-3 bg-purple-50/50 rounded-xl p-5 border border-purple-100">
+                  <MapPin className="w-6 h-6 text-purple-600 flex-shrink-0 mt-1" />
+                  <div className="flex-1">
+                    <h4 className="font-bold text-purple-900 mb-3 text-lg">
+                      Dirección
+                    </h4>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                      {profile.street && (
+                        <div>
+                          <span className="font-semibold text-gray-700">
+                            Calle:
+                          </span>{" "}
+                          <span className="text-gray-600">
+                            {profile.street}
+                          </span>
+                        </div>
+                      )}
+                      {profile.exteriorNumber && (
+                        <div>
+                          <span className="font-semibold text-gray-700">
+                            Número:
+                          </span>{" "}
+                          <span className="text-gray-600">
+                            {profile.exteriorNumber}
+                          </span>
+                          {profile.interiorNumber && (
+                            <span className="text-gray-600">
+                              {" "}
+                              - Depto/Piso {profile.interiorNumber}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                      {profile.neighborhood && (
+                        <div>
+                          <span className="font-semibold text-gray-700">
+                            Barrio:
+                          </span>{" "}
+                          <span className="text-gray-600">
+                            {profile.neighborhood}
+                          </span>
+                        </div>
+                      )}
+                      {profile.city && (
+                        <div>
+                          <span className="font-semibold text-gray-700">
+                            Ciudad:
+                          </span>{" "}
+                          <span className="text-gray-600">{profile.city}</span>
+                        </div>
+                      )}
+                      {profile.state && (
+                        <div>
+                          <span className="font-semibold text-gray-700">
+                            Estado:
+                          </span>{" "}
+                          <span className="text-gray-600">{profile.state}</span>
+                        </div>
+                      )}
+                      {profile.postalCode && (
+                        <div>
+                          <span className="font-semibold text-gray-700">
+                            CP:
+                          </span>{" "}
+                          <span className="text-gray-600">
+                            {profile.postalCode}
+                          </span>
+                        </div>
+                      )}
+                      {profile.country && (
+                        <div>
+                          <span className="font-semibold text-gray-700">
+                            País:
+                          </span>{" "}
+                          <span className="text-gray-600">
+                            {profile.country}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {profile.fullAddress && (
+                      <div className="mt-3 pt-3 border-t border-purple-100">
+                        <span className="font-semibold text-gray-700">
+                          Dirección completa:
+                        </span>
+                        <p className="text-gray-600 mt-1">
+                          {profile.fullAddress}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </motion.div>
 
@@ -562,7 +843,7 @@ export default function ProviderDashboard() {
           />
         </div>
 
-        {/* Tabs */}
+        {/* Tabs (tu implementación) */}
         <div className="relative z-10 bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl border-2 border-white/50 p-4 mb-8">
           <div className="grid grid-cols-3 gap-3">
             <TabButton
@@ -610,9 +891,9 @@ export default function ProviderDashboard() {
                   const clientName = `${a.clientId?.name ?? "Cliente"} ${
                     a.clientId?.surname ?? ""
                   }`.trim();
+
                   const badge = getBadge(a.status);
                   const busy = processingId === a.id;
-
                   const unread = unreadByAppointment[a.id] ?? 0;
 
                   return (
@@ -715,7 +996,6 @@ export default function ProviderDashboard() {
           </SectionCard>
         )}
 
-        {/* Solicitudes (requests) */}
         {activeTab === "requests" && (
           <SectionCard
             title="Solicitudes pendientes"
@@ -736,6 +1016,7 @@ export default function ProviderDashboard() {
                   const clientName = `${a.clientId?.name ?? "Cliente"} ${
                     a.clientId?.surname ?? ""
                   }`.trim();
+
                   const badge = getBadge(a.status);
                   const busy = processingId === a.id;
 
@@ -818,7 +1099,6 @@ export default function ProviderDashboard() {
           </SectionCard>
         )}
 
-        {/* Purchases (clientAppointments) */}
         {activeTab === "purchases" && (
           <SectionCard
             title="Mis compras"
@@ -839,6 +1119,7 @@ export default function ProviderDashboard() {
                   const providerName = `${a.providerId?.name ?? "Proveedor"} ${
                     a.providerId?.surname ?? ""
                   }`.trim();
+
                   const badge = getBadge(a.status);
                   const unread = unreadByAppointment[a.id] ?? 0;
 
