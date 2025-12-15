@@ -1,11 +1,13 @@
-"use client";
+'use client';
 
-import Image from "next/image";
-import { useForm } from "react-hook-form";
-import { registerProvider } from "@/app/services/auth";
-import { useState } from "react";
-import Swal from "sweetalert2";
-import OAuthLoginButton from "./OAuthLoginButton"; // ⬅️ NUEVO
+import Image from 'next/image';
+import { useForm } from 'react-hook-form';
+import { useRouter } from 'next/navigation';
+import { registerProvider } from '@/app/services/auth';
+import { useState } from 'react';
+import Swal from 'sweetalert2';
+import OAuthLoginButton from './OAuthLoginButton';
+import Link from 'next/link';
 
 interface ProviderFormData {
   name: string;
@@ -14,33 +16,13 @@ interface ProviderFormData {
   password: string;
   confirmPassword: string;
   birthDate: string;
-  profileImgUrl?: string;
-  phone: string; // solo número local
-  days: string[];
-  hours: string[];
-  about: string;
 }
 
-// ===== Países (igual que cliente) =====
-interface Country {
-  code: string;
-  abbr: string;
-  flagSrc: string;
-}
-
-const COUNTRIES: Country[] = [
-  { code: "+52", abbr: "MX", flagSrc: "/flags/mx.svg" },
-  { code: "+54", abbr: "AR", flagSrc: "/flags/ar.svg" },
-  { code: "+51", abbr: "PE", flagSrc: "/flags/pe.svg" },
-  { code: "+57", abbr: "CO", flagSrc: "/flags/co.svg" },
-  { code: "+56", abbr: "CL", flagSrc: "/flags/cl.svg" },
-];
-
-// Iconos ver/ocultar contraseña (como cliente)
+// Iconos
 const EyeIcon = () => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
-    className="h-4 w-4"
+    className="h-5 w-5"
     viewBox="0 0 24 24"
     fill="none"
     stroke="currentColor"
@@ -54,7 +36,7 @@ const EyeIcon = () => (
 const EyeOffIcon = () => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
-    className="h-4 w-4"
+    className="h-5 w-5"
     viewBox="0 0 24 24"
     fill="none"
     stroke="currentColor"
@@ -67,6 +49,7 @@ const EyeOffIcon = () => (
 );
 
 export default function RegisterProviderForm() {
+  const router = useRouter();
   const {
     register,
     handleSubmit,
@@ -74,41 +57,34 @@ export default function RegisterProviderForm() {
     reset,
     formState: { errors, isValid, isSubmitting },
   } = useForm<ProviderFormData>({
-    mode: "onChange",
+    mode: 'onChange',
   });
 
   const [loading, setLoading] = useState(false);
-  const [showPasswordInfo, setShowPasswordInfo] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [preview, setPreview] = useState<string | null>(null);
 
-  const [selectedCountry, setSelectedCountry] = useState<Country>(COUNTRIES[0]);
-  const [isCountryOpen, setIsCountryOpen] = useState(false);
+  const password = watch('password') || '';
+  const confirmPassword = watch('confirmPassword') || '';
 
-  const password = watch("password") || "";
-  const confirmPassword = watch("confirmPassword") || "";
-  const phoneValue = watch("phone") || "";
-
-  // ===== VALIDAR EDAD Y RANGO DE FECHA =====
   const validateBirthDate = (value: string) => {
-    if (!value) return "La fecha de nacimiento es obligatoria";
+    if (!value) return 'La fecha de nacimiento es obligatoria';
 
     const birthDate = new Date(value);
     const today = new Date();
 
-    if (isNaN(birthDate.getTime())) return "Fecha inválida";
+    if (isNaN(birthDate.getTime())) return 'Fecha inválida';
 
     const year = birthDate.getFullYear();
-    if (year < 1900) return "El año debe ser mayor o igual a 1900";
-    if (birthDate > today) return "La fecha no puede ser futura";
+    if (year < 1900) return 'El año debe ser mayor o igual a 1900';
+    if (birthDate > today) return 'La fecha no puede ser futura';
 
-    let age = today.getFullYear() - birthDate.getFullYear();
+    const age = today.getFullYear() - birthDate.getFullYear();
     const m = today.getMonth() - birthDate.getMonth();
     const d = today.getDate() - birthDate.getDate();
     const realAge = m > 0 || (m === 0 && d >= 0) ? age : age - 1;
 
-    if (realAge < 18) return "Debes ser mayor de edad (≥18 años)";
+    if (realAge < 18) return 'Debes ser mayor de edad (≥18 años)';
 
     return true;
   };
@@ -116,36 +92,27 @@ export default function RegisterProviderForm() {
   const onSubmit = async (data: ProviderFormData) => {
     setLoading(true);
 
-    const fullPhone = `${selectedCountry.code}${data.phone}`;
-
-    const bodyToSend: ProviderFormData = {
-      ...data,
-      phone: fullPhone,
-      profileImgUrl:
-        data.profileImgUrl && data.profileImgUrl.trim() !== ""
-          ? data.profileImgUrl
-          : undefined,
-    };
-
     try {
-      const response = await registerProvider(bodyToSend);
+      const response = await registerProvider(data);
 
       await Swal.fire({
-        icon: "success",
-        title: "Proveedor registrado",
-        text: response?.message || "Proveedor registrado exitosamente",
-        confirmButtonText: "Aceptar",
+        icon: 'success',
+        title: 'Proveedor registrado',
+        text: response?.message || 'Proveedor registrado exitosamente',
+        confirmButtonText: 'Aceptar',
       });
 
       reset();
-    } catch (err: any) {
-      const message = err?.response?.data?.message || "Error inesperado";
+      router.push('/login');
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { message?: string } } };
+      const message = error?.response?.data?.message || 'Error inesperado';
 
       await Swal.fire({
-        icon: "error",
-        title: "Error al registrar",
+        icon: 'error',
+        title: 'Error al registrar',
         text: message,
-        confirmButtonText: "Cerrar",
+        confirmButtonText: 'Cerrar',
       });
     } finally {
       setLoading(false);
@@ -153,460 +120,214 @@ export default function RegisterProviderForm() {
   };
 
   return (
-    <div className="bg-white text-gray-900 shadow-lg rounded-xl p-8 w-full max-w-md flex flex-col items-center">
-      <div className="relative w-[400px] h-[200px] mx-auto mb-2">
-        <Image
-          src="/logo-cleengo.svg"
-          alt="CleenGo Logo"
-          fill
-          className="object-contain"
-        />
-      </div>
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4 py-12">
+      <div className="w-full max-w-xl">
+        <div className="bg-white shadow-lg rounded-2xl p-10 border border-gray-100">
+          {/* Logo */}
+          <div className="flex justify-center mb-6">
+            <Image
+              src="/logo-cleengo.svg"
+              alt="CleenGo Logo"
+              width={200}
+              height={60}
+              className="object-contain"
+            />
+          </div>
 
-      <h2 className="text-2xl font-semibold text-center mb-6">
-        Registro Proveedor
-      </h2>
+          <h2 className="text-3xl font-bold text-center text-gray-800 mb-3">Registro Proveedor</h2>
+          <p className="text-center text-gray-500 mb-8">
+            Crea tu cuenta para ofrecer servicios de limpieza
+          </p>
 
-      <form
-        className="flex flex-col gap-4 w-full"
-        onSubmit={handleSubmit(onSubmit)}
-      >
-        {/* NOMBRE */}
-        <div className="flex flex-col">
-          <label>Nombre</label>
-          <input
-            className="border rounded-lg bg-white text-gray-900 px-3 py-2"
-            {...register("name", {
-              required: "El nombre es obligatorio",
-              pattern: {
-                value: /^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ\s]+$/,
-                message: "Solo letras y espacios",
-              },
-            })}
-          />
-          {errors.name && (
-            <span className="text-red-500 text-sm">{errors.name.message}</span>
-          )}
-        </div>
+          <form className="flex flex-col gap-5" onSubmit={handleSubmit(onSubmit)}>
+            {/* Nombre y Apellido */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">Nombre</label>
+                <input
+                  className={`w-full border rounded-xl px-4 py-3 text-base transition-all
+                    ${errors.name ? 'border-red-400' : 'border-gray-300 focus:border-[#3B82F6]'}
+                    focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/20`}
+                  placeholder="María"
+                  {...register('name', {
+                    required: 'El nombre es obligatorio',
+                    pattern: {
+                      value: /^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ\s]+$/,
+                      message: 'Solo letras y espacios',
+                    },
+                  })}
+                />
+                {errors.name && <span className="text-red-500 text-xs">{errors.name.message}</span>}
+              </div>
 
-        {/* APELLIDO */}
-        <div className="flex flex-col">
-          <label>Apellido</label>
-          <input
-            className="border rounded-lg bg-white text-gray-900 px-3 py-2"
-            {...register("surname", {
-              required: "El apellido es obligatorio",
-              pattern: {
-                value: /^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ\s]+$/,
-                message: "Solo letras y espacios",
-              },
-            })}
-          />
-          {errors.surname && (
-            <span className="text-red-500 text-sm">
-              {errors.surname.message}
-            </span>
-          )}
-        </div>
-
-        {/* EMAIL */}
-        <div className="flex flex-col">
-          <label>Correo</label>
-          <input
-            type="email"
-            className="border rounded-lg bg-white text-gray-900 px-3 py-2"
-            {...register("email", {
-              required: "El correo es obligatorio",
-              pattern: {
-                value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-                message: "Correo inválido",
-              },
-            })}
-          />
-          {errors.email && (
-            <span className="text-red-500 text-sm">{errors.email.message}</span>
-          )}
-        </div>
-
-        {/* PASSWORD */}
-        <div className="flex flex-col">
-          <div className="flex items-center justify-between mb-1">
-            <label>Contraseña</label>
-
-            <div className="relative">
-              <button
-                type="button"
-                className="w-5 h-5 flex items-center justify-center rounded-full border border-gray-400 text-[11px] text-gray-600 hover:bg-gray-100 transition"
-                onClick={() => setShowPasswordInfo((prev) => !prev)}
-                aria-label="Requisitos de contraseña"
-              >
-                ?
-              </button>
-
-              {showPasswordInfo && (
-                <div className="absolute right-0 mt-2 w-64 bg-[#1f2937] text-white text-xs rounded-lg shadow-xl p-3 z-20">
-                  <p className="font-semibold mb-1">Requisitos:</p>
-                  <ul className="space-y-0.5 text-[11px]">
-                    <li>- Mínimo 8 caracteres</li>
-                    <li>- Al menos una mayúscula</li>
-                    <li>- Al menos una minúscula</li>
-                    <li>- Al menos un número</li>
-                    <li>- Al menos un símbolo (!@#$?)</li>
-                  </ul>
-                </div>
-              )}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">Apellido</label>
+                <input
+                  className={`w-full border rounded-xl px-4 py-3 text-base transition-all
+                    ${errors.surname ? 'border-red-400' : 'border-gray-300 focus:border-[#3B82F6]'}
+                    focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/20`}
+                  placeholder="González"
+                  {...register('surname', {
+                    required: 'El apellido es obligatorio',
+                    pattern: {
+                      value: /^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ\s]+$/,
+                      message: 'Solo letras y espacios',
+                    },
+                  })}
+                />
+                {errors.surname && (
+                  <span className="text-red-500 text-xs">{errors.surname.message}</span>
+                )}
+              </div>
             </div>
-          </div>
 
-          <div className="flex items-center border rounded-lg px-3 py-2 bg-white">
-            <input
-              type={showPassword ? "text" : "password"}
-              className="flex-1 outline-none text-gray-900"
-              {...register("password", {
-                required: "La contraseña es obligatoria",
-                validate: {
-                  minLength: (v) =>
-                    v.length >= 8 || "Debe tener mínimo 8 caracteres",
-                  hasUpper: (v) =>
-                    /[A-Z]/.test(v) || "Debe incluir una mayúscula",
-                  hasLower: (v) =>
-                    /[a-z]/.test(v) || "Debe incluir una minúscula",
-                  hasNumber: (v) => /\d/.test(v) || "Debe incluir un número",
-                  hasSymbol: (v) =>
-                    /[^A-Za-z0-9]/.test(v) || "Debe incluir un símbolo",
-                },
-              })}
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword((v) => !v)}
-              className="ml-2 text-gray-600 hover:text-black"
-            >
-              {showPassword ? <EyeOffIcon /> : <EyeIcon />}
-            </button>
-          </div>
-
-          {errors.password && (
-            <span className="text-red-500 text-xs mt-1">
-              {errors.password.message}
-            </span>
-          )}
-        </div>
-
-        {/* CONFIRM PASSWORD */}
-        <div className="flex flex-col">
-          <label className="mb-1">Confirmar contraseña</label>
-
-          <div className="flex items-center border rounded-lg px-3 py-2 bg-white">
-            <input
-              type={showConfirmPassword ? "text" : "password"}
-              className="flex-1 outline-none text-gray-900"
-              {...register("confirmPassword", {
-                required: "Debes confirmar la contraseña",
-                validate: (value) =>
-                  value === password || "Las contraseñas no coinciden",
-              })}
-            />
-            <button
-              type="button"
-              onClick={() => setShowConfirmPassword((v) => !v)}
-              className="ml-2 text-gray-600 hover:text-black"
-            >
-              {showConfirmPassword ? <EyeOffIcon /> : <EyeIcon />}
-            </button>
-          </div>
-
-          {confirmPassword &&
-            !errors.confirmPassword &&
-            confirmPassword === password && (
-              <span className="text-xs mt-1 text-green-600">
-                Las contraseñas coinciden
-              </span>
-            )}
-
-          {errors.confirmPassword && (
-            <span className="text-red-500 text-xs mt-1">
-              {errors.confirmPassword.message}
-            </span>
-          )}
-        </div>
-
-        {/* FECHA DE NACIMIENTO */}
-        <div className="flex flex-col">
-          <label>Fecha de nacimiento</label>
-          <input
-            type="date"
-            className="border rounded-lg bg-white text-gray-900 px-3 py-2"
-            {...register("birthDate", {
-              validate: validateBirthDate,
-            })}
-          />
-          {errors.birthDate && (
-            <span className="text-red-500 text-sm">
-              {errors.birthDate.message}
-            </span>
-          )}
-        </div>
-
-        {/* IMG PERFIL (OPCIONAL) */}
-        <div className="flex flex-col">
-          <label className="text-sm mb-1">Imagen de perfil (URL)</label>
-
-          <div className="flex items-center gap-2">
-            {/* INPUT URL */}
-            <input
-              id="profileImgUrl"
-              className="border rounded-lg bg-white text-gray-900 px-3 py-2 w-full"
-              placeholder="Ej: https://miimagen.com/foto.jpg"
-              {...register("profileImgUrl", {
-                pattern: {
-                  value: /^https?:\/\/.+/,
-                  message: "Debes ingresar una URL válida",
-                },
-              })}
-            />
-
-            {/* BOTÓN SUBIR — EXACTAMENTE COMO EL QUE MOSTRASTE */}
-            <label
-              htmlFor="provider-image-upload"
-              className="
-        bg-[#F1F5F9]
-        text-gray-700
-        px-4
-        py-2
-        rounded-lg
-        border
-        border-gray-300
-        cursor-pointer
-        hover:bg-[#e5e7eb]
-        text-sm
-        whitespace-nowrap
-      "
-            >
-              Subir
-            </label>
-
-            <input
-              id="provider-image-upload"
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) {
-                  const url = URL.createObjectURL(file);
-                  setPreview(url);
-
-                  const inputEl = document.getElementById("profileImgUrl") as HTMLInputElement | null;
-                  if (inputEl) {
-                    inputEl.value = url;
-                    inputEl.dispatchEvent(new Event("input", { bubbles: true }));
-                  }
-                }
-              }}
-            />
-          </div>
-
-          {errors.profileImgUrl && (
-            <span className="text-red-500 text-sm mt-1">
-              {errors.profileImgUrl.message}
-            </span>
-          )}
-
-          {/* FOTO PREVIA */}
-          {preview && (
-            <div className="mt-3 flex justify-center">
-              <img
-                src={preview}
-                alt="preview"
-                className="w-28 h-28 rounded-full object-cover border shadow-sm"
+            {/* Email */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">Correo electrónico</label>
+              <input
+                type="email"
+                className={`w-full border rounded-xl px-4 py-3 text-base transition-all
+                  ${errors.email ? 'border-red-400' : 'border-gray-300 focus:border-[#3B82F6]'}
+                  focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/20`}
+                placeholder="correo@ejemplo.com"
+                {...register('email', {
+                  required: 'El correo es obligatorio',
+                  pattern: {
+                    value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+                    message: 'Correo inválido',
+                  },
+                })}
               />
+              {errors.email && <span className="text-red-500 text-xs">{errors.email.message}</span>}
             </div>
-          )}
-        </div>
 
-
-        {/* TELÉFONO CON PAÍS */}
-        <div className="flex flex-col">
-          <label>Teléfono</label>
-
-          <div className="flex gap-2 items-center">
-            {/* Dropdown país */}
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => setIsCountryOpen((prev) => !prev)}
-                className="flex items-center gap-2 border rounded-lg px-3 py-2 bg-white min-w-[130px]"
-              >
-                <Image
-                  src={selectedCountry.flagSrc}
-                  alt={selectedCountry.abbr}
-                  width={20}
-                  height={14}
-                  className="rounded-sm object-cover"
-                />
-                <span className="text-sm">
-                  {selectedCountry.code} {selectedCountry.abbr}
-                </span>
-                <span className="ml-auto text-xs">▼</span>
-              </button>
-
-              {isCountryOpen && (
-                <div className="absolute z-20 mt-1 w-full bg-white border rounded-lg shadow-md">
-                  {COUNTRIES.map((c) => (
-                    <button
-                      key={c.code}
-                      type="button"
-                      onClick={() => {
-                        setSelectedCountry(c);
-                        setIsCountryOpen(false);
-                      }}
-                      className="flex w-full items-center gap-2 px-3 py-2 hover:bg-gray-100 text-left"
-                    >
-                      <Image
-                        src={c.flagSrc}
-                        alt={c.abbr}
-                        width={20}
-                        height={14}
-                        className="rounded-sm object-cover"
-                      />
-                      <span className="text-sm">
-                        {c.code} {c.abbr}
-                      </span>
-                    </button>
-                  ))}
+            {/* Contraseñas */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">Contraseña</label>
+                <div
+                  className={`flex items-center border rounded-xl px-4 py-3 transition-all
+                  ${
+                    errors.password
+                      ? 'border-red-400'
+                      : 'border-gray-300 focus-within:border-[#3B82F6]'
+                  }
+                  focus-within:ring-2 focus-within:ring-[#3B82F6]/20`}
+                >
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    className="flex-1 outline-none text-base"
+                    placeholder="••••••••"
+                    {...register('password', {
+                      required: 'La contraseña es obligatoria',
+                      validate: {
+                        minLength: (v) => v.length >= 8 || 'Mínimo 8 caracteres',
+                        hasUpper: (v) => /[A-Z]/.test(v) || 'Una mayúscula',
+                        hasLower: (v) => /[a-z]/.test(v) || 'Una minúscula',
+                        hasNumber: (v) => /\d/.test(v) || 'Un número',
+                        hasSymbol: (v) => /[^A-Za-z0-9]/.test(v) || 'Un símbolo',
+                      },
+                    })}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((v) => !v)}
+                    className="ml-2 text-gray-400 hover:text-gray-600"
+                  >
+                    {showPassword ? <EyeOffIcon /> : <EyeIcon />}
+                  </button>
                 </div>
+                {errors.password && (
+                  <span className="text-red-500 text-xs">{errors.password.message}</span>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">Confirmar contraseña</label>
+                <div
+                  className={`flex items-center border rounded-xl px-4 py-3 transition-all
+                  ${
+                    errors.confirmPassword
+                      ? 'border-red-400'
+                      : 'border-gray-300 focus-within:border-[#3B82F6]'
+                  }
+                  focus-within:ring-2 focus-within:ring-[#3B82F6]/20`}
+                >
+                  <input
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    className="flex-1 outline-none text-base"
+                    placeholder="••••••••"
+                    {...register('confirmPassword', {
+                      required: 'Confirma la contraseña',
+                      validate: (value) => value === password || 'No coinciden',
+                    })}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword((v) => !v)}
+                    className="ml-2 text-gray-400 hover:text-gray-600"
+                  >
+                    {showConfirmPassword ? <EyeOffIcon /> : <EyeIcon />}
+                  </button>
+                </div>
+                {confirmPassword && !errors.confirmPassword && confirmPassword === password && (
+                  <span className="text-xs text-green-600">✔ Coinciden</span>
+                )}
+                {errors.confirmPassword && (
+                  <span className="text-red-500 text-xs">{errors.confirmPassword.message}</span>
+                )}
+              </div>
+            </div>
+
+            {/* Fecha de nacimiento */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">Fecha de nacimiento</label>
+              <input
+                type="date"
+                className={`w-full border rounded-xl px-4 py-3 text-base transition-all
+                  ${errors.birthDate ? 'border-red-400' : 'border-gray-300 focus:border-[#3B82F6]'}
+                  focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/20`}
+                {...register('birthDate', {
+                  validate: validateBirthDate,
+                })}
+              />
+              {errors.birthDate && (
+                <span className="text-red-500 text-xs">{errors.birthDate.message}</span>
               )}
             </div>
 
-            {/* Número local */}
-            <input
-              className="border rounded-lg bg-white text-gray-900 px-3 py-2 flex-1"
-              placeholder="1234567890"
-              maxLength={15}
-              {...register("phone", {
-                required: "El teléfono es obligatorio",
-                validate: (value) => {
-                  if (!value.trim()) return "El teléfono es obligatorio";
-                  if (!/^\d+$/.test(value)) return "Solo números";
-                  const fullPhone = `${selectedCountry.code}${value}`;
-                  if (fullPhone.length < 10)
-                    return "Debe tener mínimo 10 caracteres (incl. lada)";
-                  if (fullPhone.length > 15)
-                    return "Máximo 15 caracteres (incl. lada)";
-                  return true;
-                },
-              })}
-            />
-          </div>
+            {/* Botón Submit */}
+            <button
+              disabled={loading || !isValid || isSubmitting}
+              className="w-full h-13 bg-[#3B82F6] hover:bg-[#2563EB] text-white font-semibold rounded-xl shadow-md hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed text-base py-3.5 mt-2"
+            >
+              {loading || isSubmitting ? 'Registrando...' : 'Crear cuenta'}
+            </button>
 
-          {errors.phone && (
-            <span className="text-red-500 text-sm mt-1">
-              {errors.phone.message}
-            </span>
-          )}
+            <div className="mt-4">
+              <OAuthLoginButton role="provider" />
+            </div>
+
+            <div className="mt-6 flex flex-col items-center gap-3">
+              <Link
+                href="/register"
+                className="text-[#3B82F6] hover:text-[#2563EB] transition-colors text-sm font-medium"
+              >
+                ← Volver a selección de rol
+              </Link>
+              <p className="text-sm text-gray-600">
+                ¿Ya tienes cuenta?{' '}
+                <Link
+                  href="/login"
+                  className="text-[#3B82F6] font-semibold hover:text-[#2563EB] transition-colors"
+                >
+                  Inicia sesión aquí
+                </Link>
+              </p>
+            </div>
+          </form>
         </div>
-
-        {/* DAYS */}
-        <div className="flex flex-col">
-          <label>Días disponibles</label>
-
-          <div className="grid grid-cols-2 gap-2 mt-1">
-            {[
-              "Lunes",
-              "Martes",
-              "Miércoles",
-              "Jueves",
-              "Viernes",
-              "Sábado",
-              "Domingo",
-            ].map((day) => (
-              <label key={day} className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  value={day}
-                  {...register("days", {
-                    required: "Debes seleccionar al menos un día",
-                  })}
-                />
-                {day}
-              </label>
-            ))}
-          </div>
-
-          {errors.days && (
-            <span className="text-red-500 text-sm">{errors.days.message}</span>
-          )}
-        </div>
-
-        {/* HOURS */}
-        <div className="flex flex-col">
-          <label>Horarios disponibles</label>
-
-          <div className="grid grid-cols-2 gap-2 mt-1">
-            {[
-              "06:00-09:00",
-              "09:00-12:00",
-              "12:00-15:00",
-              "15:00-18:00",
-              "18:00-21:00",
-            ].map((hour) => (
-              <label key={hour} className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  value={hour}
-                  {...register("hours", {
-                    required: "Debes seleccionar al menos un horario",
-                  })}
-                />
-                {hour}
-              </label>
-            ))}
-          </div>
-
-          {errors.hours && (
-            <span className="text-red-500 text-sm">{errors.hours.message}</span>
-          )}
-        </div>
-
-        {/* ABOUT */}
-        <div className="flex flex-col">
-          <label>Sobre ti</label>
-          <textarea
-            rows={3}
-            className="border rounded-lg bg-white text-gray-900 px-3 py-2"
-            {...register("about", {
-              required: "Este campo es obligatorio",
-              minLength: {
-                value: 20,
-                message: "Debe tener al menos 20 caracteres",
-              },
-              maxLength: {
-                value: 250,
-                message: "Máximo 250 caracteres",
-              },
-            })}
-          ></textarea>
-          {errors.about && (
-            <span className="text-red-500 text-sm">{errors.about.message}</span>
-          )}
-        </div>
-
-        {/* BOTÓN SUBMIT */}
-        <button
-          disabled={loading || !isValid || isSubmitting}
-          className="bg-blue-600 text-white py-2 rounded-lg hover:opacity-90 disabled:opacity-70"
-        >
-          {loading || isSubmitting
-            ? "Registrando..."
-            : "Registrarme como Proveedor"}
-        </button>
-
-        {/* 🔵 LOGIN CON GOOGLE COMO PROVEEDOR */}
-        <div className="mt-4">
-          <OAuthLoginButton role="provider" />
-        </div>
-      </form>
+      </div>
     </div>
   );
 }
