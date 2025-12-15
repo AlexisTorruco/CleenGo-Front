@@ -1,7 +1,0 @@
-{
-  "/client/providers/page": "app/client/providers/page.js",
-  "/login/page": "app/login/page.js",
-  "/page": "app/page.js",
-  "/provider/profile/page": "app/provider/profile/page.js",
-  "/subscriptions/page": "app/subscriptions/page.js"
-}
