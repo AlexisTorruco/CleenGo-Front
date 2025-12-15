@@ -34,11 +34,12 @@ interface Plan {
 
 interface Subscription {
   id: string;
-  userId: string;
+  providerId: string; // ← CORREGIDO: providerId en lugar de userId
   planId: string;
   startDate: string;
   endDate: string;
-  status: 'active' | 'cancelled' | 'expired';
+  status?: 'active' | 'cancelled' | 'expired';
+  isActive?: boolean; // ← AGREGADO: campo alternativo
   createdAt: string;
   updatedAt: string;
 }
@@ -86,8 +87,9 @@ export default function SubscriptionPage() {
         setPlans(plansData);
       }
 
-      // Fetch user subscriptions
-      const subsResponse = await fetch(`${backendUrl}/suscription`, {
+      // Fetch user subscriptions - CORREGIDO
+      const subsResponse = await fetch(`${backendUrl}/subscription`, {
+        // ← subscription (sin 'c')
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -99,14 +101,20 @@ export default function SubscriptionPage() {
         const subsData = await subsResponse.json();
         console.log('📋 All subscriptions:', subsData);
 
-        // Find active subscription for this user
+        // Find active subscription - CORREGIDO: providerId y verificar ambos campos
         const userSub = Array.isArray(subsData)
-          ? subsData.find((sub: Subscription) => sub.userId === user.id && sub.status === 'active')
+          ? subsData.find(
+              (sub: Subscription) =>
+                sub.providerId === user.id && // ← CORREGIDO: providerId
+                (sub.status === 'active' || sub.isActive === true) // ← Verificar ambos
+            )
           : null;
 
         if (userSub) {
           console.log('✅ User active subscription:', userSub);
           setUserSubscription(userSub);
+        } else {
+          console.log('ℹ️ No active subscription found');
         }
       }
     } catch (err) {
@@ -123,7 +131,7 @@ export default function SubscriptionPage() {
     }
 
     // Check if user already has active subscription
-    if (userSubscription && userSubscription.status === 'active') {
+    if (userSubscription) {
       setError('Ya tienes una suscripción activa. Cancélala primero para cambiar de plan.');
       setTimeout(() => setError(null), 4000);
       return;
@@ -135,55 +143,82 @@ export default function SubscriptionPage() {
     try {
       const backendUrl = 'http://localhost:3000';
 
-      // Prepare subscription data
-      const subscriptionData = {
-        planId: planId,
-        providerId: user.id,
-        startDate: new Date().toISOString(),
-      };
+      // ============================================
+      // PLAN GRATUITO - Crear suscripción directa
+      // ============================================
+      if (planPrice === 0) {
+        console.log('📝 Creating FREE subscription...');
 
-      // Debug logging
-      console.log('📤 Sending to backend:', JSON.stringify(subscriptionData, null, 2));
-      console.log(
-        'Is planId a UUID?',
-        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(planId)
-      );
-      console.log(
-        'Is userId a UUID?',
-        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(user.id)
-      );
-      console.log('startDate format:', subscriptionData.startDate);
+        const subscriptionData = {
+          planId: planId,
+          providerId: user.id,
+          startDate: new Date().toISOString(),
+        };
 
-      // Create subscription
-      const response = await fetch(`${backendUrl}/suscription`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(subscriptionData),
-      });
+        console.log('📤 Sending:', subscriptionData);
 
-      if (!response.ok) {
-        const errorData = await response.text();
-        console.error('❌ Error response:', errorData);
-        throw new Error('Error al crear la suscripción');
-      }
+        const response = await fetch(`${backendUrl}/subscription`, {
+          // ← subscription
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(subscriptionData),
+        });
 
-      const newSubscription = await response.json();
-      console.log('✅ Subscription created:', newSubscription);
+        if (!response.ok) {
+          const errorData = await response.text();
+          console.error('❌ Error response:', errorData);
+          throw new Error('Error al crear la suscripción gratuita');
+        }
 
-      setUserSubscription(newSubscription);
+        const newSubscription = await response.json();
+        console.log('✅ Free subscription created:', newSubscription);
+        setUserSubscription(newSubscription);
+        showSuccessMessage(`¡Suscripción ${planName} activada exitosamente!`);
 
-      showSuccessMessage(`¡Suscripción ${planName} activada exitosamente!`);
+        // Refresh data
+        await fetchData();
+      } else {
+        // ============================================
+        // PLAN PREMIUM - Redirigir a Stripe Checkout
+        // ============================================
+        console.log('💳 Creating Stripe checkout session...');
 
-      // If premium, show payment notice
-      if (planPrice > 0) {
-        setTimeout(() => {
-          alert(
-            `💳 Recordatorio: Para activar pagos reales, el backend necesita integrar Stripe.\n\nPor ahora, tu suscripción Premium está activa en modo demo.`
-          );
-        }, 2000);
+        // SOLO enviar providerId - El backend maneja el resto
+        const checkoutData = {
+          providerId: user.id,
+          planId: planId,
+        };
+
+        console.log('📤 Sending to backend:', checkoutData);
+
+        const response = await fetch(`${backendUrl}/subscription/create-checkout-session`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(checkoutData),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.text();
+          console.error('❌ Backend error:', errorData);
+          throw new Error('Error al crear la sesión de pago con Stripe');
+        }
+
+        const { url } = await response.json();
+        console.log('✅ Stripe Checkout URL:', url);
+
+        // Redirect to Stripe Checkout
+        if (url) {
+          console.log('🔄 Redirecting to Stripe...');
+          window.location.href = url;
+        } else {
+          throw new Error('No se recibió URL de checkout de Stripe');
+        }
       }
     } catch (err) {
       console.error('❌ Error subscribing:', err);
@@ -205,7 +240,8 @@ export default function SubscriptionPage() {
     try {
       const backendUrl = 'http://localhost:3000';
 
-      const response = await fetch(`${backendUrl}/suscription/${userSubscription.id}`, {
+      const response = await fetch(`${backendUrl}/subscription/${userSubscription.id}`, {
+        // ← subscription
         method: 'PUT',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -225,7 +261,7 @@ export default function SubscriptionPage() {
       showSuccessMessage('Suscripción cancelada exitosamente');
 
       // Reload data
-      fetchData();
+      await fetchData();
     } catch (err) {
       console.error('❌ Error cancelling subscription:', err);
       setError(err instanceof Error ? err.message : 'Error al cancelar la suscripción');
@@ -246,11 +282,14 @@ export default function SubscriptionPage() {
   const freePlan = plans.find((p) => p.price === 0 || p.name.toLowerCase().includes('gratuito'));
   const premiumPlan = plans.find((p) => p.price > 0 || p.name.toLowerCase().includes('premium'));
 
-  const hasActiveSubscription = userSubscription?.status === 'active';
+  const hasActiveSubscription = !!(
+    userSubscription &&
+    (userSubscription.status === 'active' || userSubscription.isActive === true)
+  );
+
   const activePlan = hasActiveSubscription
     ? plans.find((p) => p.id === userSubscription?.planId)
     : null;
-  const isPremium = activePlan && activePlan.price > 0;
 
   const daysRemaining = userSubscription?.endDate
     ? Math.max(
@@ -545,7 +584,7 @@ export default function SubscriptionPage() {
 
                 {!(hasActiveSubscription && userSubscription?.planId === premiumPlan.id) && (
                   <p className="text-center text-sm text-gray-500 mt-4">
-                    💳 Demo: Pago real con Stripe próximamente
+                    💳 Pago seguro con Stripe
                   </p>
                 )}
               </div>
@@ -565,7 +604,7 @@ export default function SubscriptionPage() {
               <Shield className="w-8 h-8 text-blue-600" />
             </div>
             <h3 className="text-lg font-bold text-gray-900 mb-2">Pago Seguro</h3>
-            <p className="text-gray-600">Próximamente con Stripe</p>
+            <p className="text-gray-600">Procesado con Stripe</p>
           </div>
 
           <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-lg p-6 text-center border-2 border-white/50">
