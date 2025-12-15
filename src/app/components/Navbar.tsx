@@ -1,22 +1,32 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import Image from 'next/image';
-import { useState } from 'react';
-import { useAuth } from '@/app/contexts/AuthContext';
+import Link from "next/link";
+import Image from "next/image";
+import { useState, useEffect } from "react";
+import { useAuth } from "@/app/contexts/AuthContext";
 
 export default function Navbar() {
   const { user, logout } = useAuth();
   const role = user?.role;
 
   const [isOpen, setIsOpen] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
 
-  // 👉 Cerrar menú cuando se hace click en algún link
+  // Marcamos cuando el componente ya se montó en el cliente
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  // Valores "seguros" para SSR + cliente
+  const effectiveUser = isMounted ? user : null;
+  const effectiveRole = isMounted ? role : undefined;
+
+  // Cerrar menú cuando se hace click en algún link
   const handleMenuItemClick = () => {
     setIsOpen(false);
   };
 
-  // 👉 Logout que también cierra el menú
+  // Logout que también cierra el menú
   const handleLogout = () => {
     logout();
     setIsOpen(false);
@@ -26,7 +36,11 @@ export default function Navbar() {
     <nav className="w-full bg-white shadow-md fixed top-0 left-0 z-50 border-b border-gray-100">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-16">
         {/* Logo */}
-        <Link href="/" className="flex items-center gap-2" onClick={handleMenuItemClick}>
+        <Link
+          href="/"
+          className="flex items-center gap-2"
+          onClick={handleMenuItemClick}
+        >
           <Image
             src="/logo-horizontal.svg"
             alt="CleenGo Logo"
@@ -42,12 +56,17 @@ export default function Navbar() {
             onClick={() => setIsOpen(!isOpen)}
             className="text-gray-700 hover:text-teal-500 focus:outline-none"
           >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 strokeWidth={2}
-                d={isOpen ? 'M6 18L18 6M6 6l12 12' : 'M4 6h16M4 12h16M4 18h16'}
+                d={isOpen ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16M4 18h16"}
               />
             </svg>
           </button>
@@ -58,14 +77,14 @@ export default function Navbar() {
           suppressHydrationWarning
           className={`lg:flex lg:items-center lg:gap-6 ${
             isOpen
-              ? 'flex flex-col w-full mt-4 space-y-4 bg-white p-4 rounded-lg shadow-lg absolute top-16 left-0 lg:static lg:shadow-none lg:p-0'
-              : 'hidden lg:flex'
+              ? "flex flex-col w-full mt-4 space-y-4 bg-white p-4 rounded-lg shadow-lg absolute top-16 left-0 lg:static lg:shadow-none lg:p-0"
+              : "hidden lg:flex"
           }`}
         >
           {/* ------------------- */}
           {/* GUEST NAVBAR       */}
           {/* ------------------- */}
-          {!user && (
+          {!effectiveUser && (
             <div className="flex flex-col lg:flex-row lg:items-center lg:gap-6 gap-3 w-full">
               <Link
                 href="/client/home"
@@ -82,7 +101,7 @@ export default function Navbar() {
                 Proveedores
               </Link>
               <Link
-                href="/suscripcion"
+                href="/subscriptions"
                 onClick={handleMenuItemClick}
                 className="text-gray-700 font-medium hover:text-teal-500 transition"
               >
@@ -108,7 +127,7 @@ export default function Navbar() {
           {/* ------------------- */}
           {/* CLIENT NAVBAR       */}
           {/* ------------------- */}
-          {user && role === 'client' && (
+          {effectiveUser && effectiveRole === "client" && (
             <div className="flex flex-col lg:flex-row lg:items-center lg:gap-6 gap-3 w-full">
               <Link
                 href="/client/home"
@@ -124,13 +143,7 @@ export default function Navbar() {
               >
                 Proveedores
               </Link>
-              <Link
-                href="/suscripcion"
-                onClick={handleMenuItemClick}
-                className="text-gray-700 font-medium hover:text-teal-500 transition text-center"
-              >
-                Suscripción
-              </Link>
+
               <Link
                 href="/blog"
                 onClick={handleMenuItemClick}
@@ -165,7 +178,11 @@ export default function Navbar() {
                 onClick={handleMenuItemClick}
                 className="text-gray-700 hover:text-teal-500 transition text-center"
               >
-                <svg className="w-6 h-6 mx-auto" fill="currentColor" viewBox="0 0 20 20">
+                <svg
+                  className="w-6 h-6 mx-auto"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
                   <path
                     fillRule="evenodd"
                     d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
@@ -174,7 +191,11 @@ export default function Navbar() {
                 </svg>
               </Link>
               <span className="text-gray-700 font-medium text-center">
-                ¡Hola, <span className="text-teal-500 font-semibold">{user.name}</span>!
+                ¡Hola,{" "}
+                <span className="text-teal-500 font-semibold">
+                  {user?.name}
+                </span>
+                !
               </span>
               <button
                 onClick={handleLogout}
@@ -188,14 +209,14 @@ export default function Navbar() {
           {/* ------------------- */}
           {/* PROVIDER NAVBAR     */}
           {/* ------------------- */}
-          {user && role === 'provider' && (
+          {effectiveUser && effectiveRole === "provider" && (
             <div className="flex flex-col lg:flex-row lg:items-center lg:gap-6 gap-3 w-full">
               <Link
-                href="/provider/dashboard"
+                href="/client/home"
                 onClick={handleMenuItemClick}
                 className="text-gray-700 font-medium hover:text-teal-500 transition text-center"
               >
-                Dashboard
+                Inicio
               </Link>
               <Link
                 href="/client/providers"
@@ -205,7 +226,7 @@ export default function Navbar() {
                 Proveedores
               </Link>
               <Link
-                href="/suscripcion"
+                href="/subscriptions"
                 onClick={handleMenuItemClick}
                 className="text-gray-700 font-medium hover:text-teal-500 transition text-center"
               >
@@ -242,7 +263,11 @@ export default function Navbar() {
                 onClick={handleMenuItemClick}
                 className="text-gray-700 hover:text-teal-500 transition text-center"
               >
-                <svg className="w-6 h-6 mx-auto" fill="currentColor" viewBox="0 0 20 20">
+                <svg
+                  className="w-6 h-6 mx-auto"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
                   <path
                     fillRule="evenodd"
                     d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
@@ -251,13 +276,17 @@ export default function Navbar() {
                 </svg>
               </Link>
               <span className="text-gray-700 font-medium text-center">
-                ¡Hola, <span className="text-teal-500 font-semibold">{user.name}</span>!
+                ¡Hola,{" "}
+                <span className="text-teal-500 font-semibold">
+                  {user?.name}
+                </span>
+                !
               </span>
               <button
                 onClick={handleLogout}
                 className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg font-medium hover:bg-gray-200 transition"
               >
-                Cerrar Sesión
+                Cerrar sesión
               </button>
             </div>
           )}

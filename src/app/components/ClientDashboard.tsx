@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { useCallback, useEffect, useState } from 'react';
-import { useAuth } from '../contexts/AuthContext';
-import { useRouter } from 'next/navigation';
-import { motion } from 'framer-motion';
+import { useCallback, useEffect, useState } from "react";
+import { useAuth } from "../contexts/AuthContext";
+import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
 import {
   Calendar,
   Clock,
@@ -21,7 +21,7 @@ import {
   TrendingUp,
   Award,
   Image as ImageIcon,
-} from 'lucide-react';
+} from "lucide-react";
 
 // ============================================
 // INTERFACES
@@ -49,7 +49,7 @@ interface Appointment {
   id: string;
   date: string;
   cost: number;
-  status: 'completed' | 'scheduled' | 'in-progress' | 'cancelled' | 'pending';
+  status: "completed" | "scheduled" | "in-progress" | "cancelled" | "pending";
   clientId?: string;
   providerId?: string;
   serviceId?: string;
@@ -92,62 +92,70 @@ export default function ClientDashboard() {
     setError(null);
 
     try {
-      const backendUrl = 'http://localhost:3000';
+      const backendUrl = "http://localhost:3000";
 
-      console.log('📡 Fetching client data for:', user.id);
+      console.log("📡 Fetching client data for:", user.id);
 
       // Fetch user profile
       const profileRes = await fetch(`${backendUrl}/user/profile/${user.id}`, {
         headers: {
           Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
-        cache: 'no-store',
+        cache: "no-store",
       });
 
       if (!profileRes.ok) {
         if (profileRes.status === 401) {
           logout();
-          router.push('/login');
+          router.push("/login");
           return;
         }
-        throw new Error('Error al cargar el perfil');
+        throw new Error("Error al cargar el perfil");
       }
 
       const profileData = await profileRes.json();
-      console.log('👤 Profile data loaded:', profileData);
+      console.log("👤 Profile data loaded:", profileData);
       setProfile(profileData);
 
       // Fetch appointments
       const appointmentsRes = await fetch(`${backendUrl}/appointments`, {
         headers: {
           Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
-        cache: 'no-store',
+        cache: "no-store",
       });
 
       if (appointmentsRes.ok) {
-        const contentType = appointmentsRes.headers.get('content-type');
+        const contentType = appointmentsRes.headers.get("content-type");
         let allAppointments: Appointment[] = [];
 
-        if (contentType && contentType.includes('application/json')) {
+        if (contentType && contentType.includes("application/json")) {
           const data = await appointmentsRes.json();
-          allAppointments = Array.isArray(data) ? data : data.appointments || [];
+          allAppointments = Array.isArray(data)
+            ? data
+            : data.appointments || [];
         }
 
         // Filter for this client
-        const clientAppointments = allAppointments.filter((apt) => apt.clientId === user.id);
-        console.log('📅 Client appointments:', clientAppointments.length);
+        const clientAppointments = allAppointments.filter(
+          (apt) => apt.clientId === user.id
+        );
+        console.log("📅 Client appointments:", clientAppointments.length);
 
         setAppointments(clientAppointments);
 
         // Calculate stats
-        const completed = clientAppointments.filter((apt) => apt.status === 'completed').length;
-        const upcoming = clientAppointments.filter(
-          (apt) => apt.status === 'scheduled' || apt.status === 'in-progress'
+        const completed = clientAppointments.filter(
+          (apt) => apt.status === "completed"
         ).length;
-        const pending = clientAppointments.filter((apt) => apt.status === 'pending').length;
+        const upcoming = clientAppointments.filter(
+          (apt) => apt.status === "scheduled" || apt.status === "in-progress"
+        ).length;
+        const pending = clientAppointments.filter(
+          (apt) => apt.status === "pending"
+        ).length;
 
         setStats({
           totalAppointments: clientAppointments.length,
@@ -156,7 +164,7 @@ export default function ClientDashboard() {
           pendingAppointments: pending,
         });
 
-        console.log('📊 Stats calculated:', {
+        console.log("📊 Stats calculated:", {
           total: clientAppointments.length,
           completed,
           upcoming,
@@ -164,41 +172,43 @@ export default function ClientDashboard() {
         });
       }
     } catch (err) {
-      console.error('❌ Error fetching data:', err);
-      setError(err instanceof Error ? err.message : 'Error al cargar los datos');
+      console.error("❌ Error fetching data:", err);
+      setError(
+        err instanceof Error ? err.message : "Error al cargar los datos"
+      );
     } finally {
       setLoading(false);
     }
   }, [user, token, logout, router]);
 
   useEffect(() => {
-    console.log('🔍 ClientDashboard - Checking auth...');
-    console.log('👤 User:', user);
-    console.log('🔑 Token:', token ? 'Exists ✅' : 'Missing ❌');
+    console.log("🔍 ClientDashboard - Checking auth...");
+    console.log("👤 User:", user);
+    console.log("🔑 Token:", token ? "Exists ✅" : "Missing ❌");
 
     if (!user || !token) {
-      console.log('❌ No user or token, redirecting to login');
-      router.push('/login');
+      console.log("❌ No user or token, redirecting to login");
+      router.push("/login");
       return;
     }
 
-    if (user.role !== 'client') {
-      console.log('❌ Not a client, redirecting to dashboard');
-      router.push('/dashboard');
+    if (user.role !== "client") {
+      console.log("❌ Not a client, redirecting to dashboard");
+      router.push("/dashboard");
       return;
     }
 
-    console.log('✅ Auth OK, fetching data...');
+    console.log("✅ Auth OK, fetching data...");
     fetchData();
 
     // Reload on window focus
     const handleFocus = () => {
-      console.log('👁️ Window focused - Reloading data...');
+      console.log("👁️ Window focused - Reloading data...");
       fetchData();
     };
 
-    window.addEventListener('focus', handleFocus);
-    return () => window.removeEventListener('focus', handleFocus);
+    window.addEventListener("focus", handleFocus);
+    return () => window.removeEventListener("focus", handleFocus);
   }, [user, token, router, fetchData]);
 
   if (loading) {
@@ -236,15 +246,35 @@ export default function ClientDashboard() {
 
   const statusConfig = {
     completed: {
-      bg: 'bg-emerald-100',
-      text: 'text-emerald-700',
-      label: 'Completado',
+      bg: "bg-emerald-100",
+      text: "text-emerald-700",
+      label: "Completado",
       icon: CheckCircle,
     },
-    scheduled: { bg: 'bg-blue-100', text: 'text-blue-700', label: 'Programado', icon: Calendar },
-    'in-progress': { bg: 'bg-cyan-100', text: 'text-cyan-700', label: 'En Progreso', icon: Clock },
-    cancelled: { bg: 'bg-red-100', text: 'text-red-700', label: 'Cancelado', icon: XCircle },
-    pending: { bg: 'bg-yellow-100', text: 'text-yellow-700', label: 'Pendiente', icon: Clock },
+    scheduled: {
+      bg: "bg-blue-100",
+      text: "text-blue-700",
+      label: "Programado",
+      icon: Calendar,
+    },
+    "in-progress": {
+      bg: "bg-cyan-100",
+      text: "text-cyan-700",
+      label: "En Progreso",
+      icon: Clock,
+    },
+    cancelled: {
+      bg: "bg-red-100",
+      text: "text-red-700",
+      label: "Cancelado",
+      icon: XCircle,
+    },
+    pending: {
+      bg: "bg-yellow-100",
+      text: "text-yellow-700",
+      label: "Pendiente",
+      icon: Clock,
+    },
   };
 
   return (
@@ -255,11 +285,11 @@ export default function ClientDashboard() {
           <div className="absolute top-0 right-0 w-96 h-96 bg-blue-300/20 rounded-full blur-3xl animate-pulse"></div>
           <div
             className="absolute bottom-0 left-0 w-96 h-96 bg-emerald-300/20 rounded-full blur-3xl animate-pulse"
-            style={{ animationDelay: '1s' }}
+            style={{ animationDelay: "1s" }}
           ></div>
           <div
             className="absolute top-1/2 left-1/2 w-96 h-96 bg-cyan-300/20 rounded-full blur-3xl animate-pulse"
-            style={{ animationDelay: '2s' }}
+            style={{ animationDelay: "2s" }}
           ></div>
         </div>
 
@@ -313,38 +343,14 @@ export default function ClientDashboard() {
 
                 {/* Address */}
                 {profile?.address && (
-                  <div className="flex items-start gap-3 text-gray-600 text-sm bg-blue-50/50 rounded-xl p-4 border border-blue-100">
-                    <MapPin className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
-                    <div className="flex flex-col gap-2 text-left">
-                      <div>
-                        <span className="font-semibold text-gray-700">Dirección: </span>
-                        <span>{profile.address}</span>
-                      </div>
-                      {profile.city && (
-                        <div>
-                          <span className="font-semibold text-gray-700">Ciudad: </span>
-                          <span>{profile.city}</span>
-                        </div>
-                      )}
-                      {profile.state && (
-                        <div>
-                          <span className="font-semibold text-gray-700">Estado: </span>
-                          <span>{profile.state}</span>
-                        </div>
-                      )}
-                      {profile.country && (
-                        <div>
-                          <span className="font-semibold text-gray-700">País: </span>
-                          <span>{profile.country}</span>
-                        </div>
-                      )}
-                      {profile.postalCode && (
-                        <div>
-                          <span className="font-semibold text-gray-700">Código Postal: </span>
-                          <span>{profile.postalCode}</span>
-                        </div>
-                      )}
-                    </div>
+                  <div className="flex items-center justify-center md:justify-start gap-2 text-gray-600 text-sm bg-blue-50/50 rounded-xl p-3 border border-blue-100">
+                    <MapPin className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                    <span>
+                      {profile.address}
+                      {profile.city && `, ${profile.city}`}
+                      {profile.state && `, ${profile.state}`}
+                      {profile.postalCode && ` ${profile.postalCode}`}
+                    </span>
                   </div>
                 )}
               </div>
@@ -354,7 +360,7 @@ export default function ClientDashboard() {
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  onClick={() => router.push('/client/profile/edit')}
+                  onClick={() => router.push("/client/profile/edit")} // 👈 ruta correcta
                   className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-xl hover:shadow-lg transition-all font-semibold"
                 >
                   <Edit className="w-5 h-5" />
@@ -382,7 +388,9 @@ export default function ClientDashboard() {
                   <Package className="w-6 h-6 text-white" />
                 </div>
               </div>
-              <h3 className="text-gray-600 text-sm mb-1 font-semibold">Total de Citas</h3>
+              <h3 className="text-gray-600 text-sm mb-1 font-semibold">
+                Total de Citas
+              </h3>
               <p className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
                 {stats.totalAppointments}
               </p>
@@ -404,7 +412,9 @@ export default function ClientDashboard() {
                   <Clock className="w-6 h-6 text-white" />
                 </div>
               </div>
-              <h3 className="text-gray-600 text-sm mb-1 font-semibold">Pendientes</h3>
+              <h3 className="text-gray-600 text-sm mb-1 font-semibold">
+                Pendientes
+              </h3>
               <p className="text-3xl font-bold bg-gradient-to-r from-yellow-600 to-amber-600 bg-clip-text text-transparent">
                 {stats.pendingAppointments}
               </p>
@@ -426,7 +436,9 @@ export default function ClientDashboard() {
                   <TrendingUp className="w-6 h-6 text-white" />
                 </div>
               </div>
-              <h3 className="text-gray-600 text-sm mb-1 font-semibold">Próximas</h3>
+              <h3 className="text-gray-600 text-sm mb-1 font-semibold">
+                Próximas
+              </h3>
               <p className="text-3xl font-bold bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent">
                 {stats.upcomingAppointments}
               </p>
@@ -448,7 +460,9 @@ export default function ClientDashboard() {
                   <CheckCircle className="w-6 h-6 text-white" />
                 </div>
               </div>
-              <h3 className="text-gray-600 text-sm mb-1 font-semibold">Completadas</h3>
+              <h3 className="text-gray-600 text-sm mb-1 font-semibold">
+                Completadas
+              </h3>
               <p className="text-3xl font-bold bg-gradient-to-r from-emerald-600 to-green-600 bg-clip-text text-transparent">
                 {stats.completedAppointments}
               </p>
@@ -488,12 +502,16 @@ export default function ClientDashboard() {
                   <Calendar className="w-16 h-16 text-blue-600" />
                 </div>
               </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-2">No tienes citas aún</h3>
-              <p className="text-gray-600 text-lg mb-6">Agenda tu primera cita con un proveedor</p>
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                No tienes citas aún
+              </h3>
+              <p className="text-gray-600 text-lg mb-6">
+                Agenda tu primera cita con un proveedor
+              </p>
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                onClick={() => router.push('/client/providers')}
+                onClick={() => router.push("/client/providers")}
                 className="px-8 py-3 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-xl hover:shadow-lg transition-all font-semibold"
               >
                 Ver Proveedores
@@ -533,13 +551,16 @@ export default function ClientDashboard() {
                         <div className="flex items-center gap-2 text-gray-700 mb-2">
                           <Calendar className="w-4 h-4 text-blue-600" />
                           <span className="font-medium">
-                            {new Date(appointment.date).toLocaleDateString('es-MX', {
-                              year: 'numeric',
-                              month: 'long',
-                              day: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit',
-                            })}
+                            {new Date(appointment.date).toLocaleDateString(
+                              "es-MX",
+                              {
+                                year: "numeric",
+                                month: "long",
+                                day: "numeric",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              }
+                            )}
                           </span>
                         </div>
 
@@ -561,7 +582,9 @@ export default function ClientDashboard() {
                         <div className="text-3xl font-bold text-blue-700">
                           ${appointment.cost.toLocaleString()}
                         </div>
-                        <div className="text-sm text-blue-600 font-medium">MXN</div>
+                        <div className="text-sm text-blue-600 font-medium">
+                          MXN
+                        </div>
                       </div>
                     </div>
 
