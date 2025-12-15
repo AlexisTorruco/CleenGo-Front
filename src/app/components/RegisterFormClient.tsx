@@ -110,6 +110,7 @@ export default function RegisterFormClient() {
         else if (value !== currentForm.password) msg = 'Las contraseñas no coinciden';
         break;
 
+
       case 'birthDate': {
         if (!value.trim()) {
           msg = 'Fecha obligatoria';
