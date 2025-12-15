@@ -1,6 +1,7 @@
+//src/app/components/ClientDashboard.tsx
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Swal from "sweetalert2";
 import { useAuth } from "@/app/contexts/AuthContext";
@@ -45,6 +46,17 @@ interface AppointmentsResponse {
   clientAppointments: Appointment[];
 }
 
+// respuesta esperada del backend
+type UnreadSummaryItem = {
+  appointmentId: string;
+  otherUser?: {
+    id: string;
+    name: string;
+    surname?: string;
+  };
+  count: number;
+};
+
 export default function ClientProfileDashboard() {
   const router = useRouter();
   const { user, token } = useAuth();
@@ -55,6 +67,11 @@ export default function ClientProfileDashboard() {
   const [loading, setLoading] = useState(false);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [mounted, setMounted] = useState(false);
+
+  // ✅ unread map: appointmentId -> count
+  const [unreadByAppointment, setUnreadByAppointment] = useState<
+    Record<string, number>
+  >({});
 
   // ✅ Siempre primero hooks, luego retornos condicionales en el render
   useEffect(() => {
@@ -84,7 +101,7 @@ export default function ClientProfileDashboard() {
     const run = async () => {
       setLoading(true);
       try {
-        // ✅ YA que arreglaste bearerAuth, usa el endpoint que depende del usuario autenticado
+        // ✅ endpoint que depende del usuario autenticado
         const url = `${backendUrl}/appointments`;
 
         const res = await fetch(url, {
@@ -125,6 +142,46 @@ export default function ClientProfileDashboard() {
 
     return () => controller.abort();
   }, [mounted, user, token, backendUrl]);
+
+  // =========================
+  // FETCH UNREAD SUMMARY
+  // =========================
+  const fetchUnreadSummary = useCallback(async () => {
+    if (!backendUrl || !token || !user?.id) return;
+
+    const res = await fetch(`${backendUrl}/chat/unread-summary`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        accept: "application/json",
+      },
+      cache: "no-store",
+    });
+
+    if (!res.ok) return;
+
+    const data = await res.json();
+
+    const map: Record<string, number> = {};
+    data.forEach((d: any) => {
+      map[d.appointmentId] = d.count;
+    });
+
+    setUnreadByAppointment(map);
+  }, [backendUrl, token, user?.id]);
+
+  // Cargar unread una vez al montar + cuando cambie token
+  useEffect(() => {
+    if (!mounted) return;
+    if (!user) return;
+    fetchUnreadSummary();
+  }, [mounted, user, fetchUnreadSummary]);
+
+  // Refrescar al volver a la pestaña (cuando sales/entras del chat)
+  useEffect(() => {
+    const onFocus = () => fetchUnreadSummary();
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [fetchUnreadSummary]);
 
   // =========================
   // CONTADORES
@@ -272,6 +329,12 @@ export default function ClientProfileDashboard() {
 
                 const badge = statusBadge(a.status);
 
+                const isConfirmed = String(a.status)
+                  .toLowerCase()
+                  .includes("confirmed");
+
+                const unreadCount = unreadByAppointment[a.id] ?? 0;
+
                 return (
                   <div
                     key={a.id}
@@ -313,16 +376,17 @@ export default function ClientProfileDashboard() {
                         {badge.label}
                       </span>
 
-                      {String(a.status).toLowerCase().includes("confirmed") && (
+                      {isConfirmed && (
                         <button
-                          onClick={() =>
-                            router.push(
-                              `/client/chat?appointmentId=${a.id}&providerId=${provider?.id}`
-                            )
-                          }
-                          className="bg-[#0A65FF] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:opacity-90"
+                          onClick={() => router.push(`/client/chat/${a.id}`)}
+                          className="relative bg-[#0A65FF] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:opacity-90"
                         >
                           Abrir chat
+                          {unreadCount > 0 && (
+                            <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
+                              {unreadCount}
+                            </span>
+                          )}
                         </button>
                       )}
                     </div>

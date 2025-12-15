@@ -1,4 +1,4 @@
-//cleengo-front/next.config.ts
+// CleenGo-Front/next.config.ts
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
