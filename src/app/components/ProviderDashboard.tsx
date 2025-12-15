@@ -128,7 +128,12 @@ export default function ProviderDashboard() {
           router.push('/login');
           return;
         }
-        throw new Error('Error al cargar el perfil');
+        console.error('Profile fetch failed:', {
+          status: profileRes.status,
+          statusText: profileRes.statusText,
+          url: `${backendUrl}/provider/${user.id}`,
+        });
+        throw new Error(`Error al cargar el perfil (${profileRes.status}: ${profileRes.statusText})`);
       }
 
       const profileData = await profileRes.json();
