@@ -34,12 +34,12 @@ interface Plan {
 
 interface Subscription {
   id: string;
-  providerId: string; // ← CORREGIDO: providerId en lugar de userId
+  providerId: string;
   planId: string;
   startDate: string;
   endDate: string;
   status?: 'active' | 'cancelled' | 'expired';
-  isActive?: boolean; // ← AGREGADO: campo alternativo
+  isActive?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -87,9 +87,8 @@ export default function SubscriptionPage() {
         setPlans(plansData);
       }
 
-      // Fetch user subscriptions - CORREGIDO
+      // Fetch user subscriptions
       const subsResponse = await fetch(`${backendUrl}/subscription`, {
-        // ← subscription (sin 'c')
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -101,12 +100,11 @@ export default function SubscriptionPage() {
         const subsData = await subsResponse.json();
         console.log('📋 All subscriptions:', subsData);
 
-        // Find active subscription - CORREGIDO: providerId y verificar ambos campos
+        // Find active subscription
         const userSub = Array.isArray(subsData)
           ? subsData.find(
               (sub: Subscription) =>
-                sub.providerId === user.id && // ← CORREGIDO: providerId
-                (sub.status === 'active' || sub.isActive === true) // ← Verificar ambos
+                sub.providerId === user.id && (sub.status === 'active' || sub.isActive === true)
             )
           : null;
 
@@ -143,86 +141,136 @@ export default function SubscriptionPage() {
     try {
       const backendUrl = 'http://localhost:3000';
 
-      // ============================================
-      // PLAN GRATUITO - Crear suscripción directa
-      // ============================================
-      if (planPrice === 0) {
-        console.log('📝 Creating FREE subscription...');
+      console.log('💳 Creating Stripe checkout session...');
+      console.log('🔍 User data:', {
+        userId: user.id,
+        planId,
+        token: token ? 'exists' : 'missing',
+      });
 
-        const subscriptionData = {
-          planId: planId,
-          providerId: user.id,
-          startDate: new Date().toISOString(),
-        };
+      const checkoutData = {
+        providerId: user.id,
+        planId: planId,
+      };
 
-        console.log('📤 Sending:', subscriptionData);
+      console.log('📤 Sending to backend:', JSON.stringify(checkoutData, null, 2));
 
-        const response = await fetch(`${backendUrl}/subscription`, {
-          // ← subscription
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(subscriptionData),
-        });
+      const response = await fetch(`${backendUrl}/subscription/create-checkout-session`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(checkoutData),
+      });
 
-        if (!response.ok) {
-          const errorData = await response.text();
-          console.error('❌ Error response:', errorData);
-          throw new Error('Error al crear la suscripción gratuita');
-        }
+      console.log('📥 Response status:', response.status, response.statusText);
+      console.log('📥 Response headers:', Object.fromEntries(response.headers.entries()));
 
-        const newSubscription = await response.json();
-        console.log('✅ Free subscription created:', newSubscription);
-        setUserSubscription(newSubscription);
-        showSuccessMessage(`¡Suscripción ${planName} activada exitosamente!`);
+      // Intentar parsear la respuesta como JSON primero
+      let responseData;
+      const contentType = response.headers.get('content-type');
 
-        // Refresh data
-        await fetchData();
-      } else {
-        // ============================================
-        // PLAN PREMIUM - Redirigir a Stripe Checkout
-        // ============================================
-        console.log('💳 Creating Stripe checkout session...');
+      console.log('📋 Content-Type:', contentType);
 
-        // SOLO enviar providerId - El backend maneja el resto
-        const checkoutData = {
-          providerId: user.id,
-          planId: planId,
-        };
-
-        console.log('📤 Sending to backend:', checkoutData);
-
-        const response = await fetch(`${backendUrl}/subscription/create-checkout-session`, {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(checkoutData),
-        });
-
-        if (!response.ok) {
-          const errorData = await response.text();
-          console.error('❌ Backend error:', errorData);
-          throw new Error('Error al crear la sesión de pago con Stripe');
-        }
-
-        const { url } = await response.json();
-        console.log('✅ Stripe Checkout URL:', url);
-
-        // Redirect to Stripe Checkout
-        if (url) {
-          console.log('🔄 Redirecting to Stripe...');
-          window.location.href = url;
+      try {
+        if (contentType && contentType.includes('application/json')) {
+          responseData = await response.json();
+          console.log('✅ Parsed as JSON:', responseData);
         } else {
-          throw new Error('No se recibió URL de checkout de Stripe');
+          responseData = await response.text();
+          console.log('✅ Parsed as TEXT:', responseData);
         }
+      } catch (parseError) {
+        console.error('❌ Error parsing response:', parseError);
+        throw new Error('Error al procesar la respuesta del servidor');
       }
+
+      console.log('📦 Response data (final):', responseData);
+
+      if (!response.ok) {
+        console.log('❌ Response is NOT OK');
+        console.log('❌ Status:', response.status);
+        console.log('❌ Status Text:', response.statusText);
+        console.log('❌ Data:', responseData);
+        console.log('❌ Type of data:', typeof responseData);
+
+        console.error('❌ Backend error details:', {
+          status: response.status,
+          statusText: response.statusText,
+          data: responseData,
+          headers: Object.fromEntries(response.headers.entries()),
+        });
+
+        // Intentar extraer mensaje de error específico
+        let errorMessage = 'Error al crear la sesión de pago con Stripe';
+
+        console.log('🔍 Extracting error message from:', responseData);
+
+        if (typeof responseData === 'object' && responseData !== null) {
+          console.log('📝 Is object, checking message field...');
+          const backendMessage = responseData.message || responseData.error;
+
+          // Si es un error genérico del backend, dar más contexto
+          if (backendMessage === 'Internal server error') {
+            errorMessage =
+              'Error en el servidor. Por favor contacta al administrador. Detalles: Verifica que Stripe esté configurado correctamente y que el plan exista.';
+            console.error('🚨 Backend error genérico. Posibles causas:', {
+              causa1: 'Stripe API keys no configuradas en el backend',
+              causa2: 'Plan ID no existe en la base de datos',
+              causa3: 'Provider ID no existe o es inválido',
+              causa4: 'Error de conexión con Stripe',
+              providerId: checkoutData.providerId,
+              planId: checkoutData.planId,
+            });
+          } else {
+            errorMessage = backendMessage || JSON.stringify(responseData);
+          }
+          console.log('📝 Extracted message:', errorMessage);
+        } else if (typeof responseData === 'string') {
+          console.log('📝 Is string, trying to parse...');
+          try {
+            const parsed = JSON.parse(responseData);
+            errorMessage = parsed.message || parsed.error || errorMessage;
+            console.log('📝 Parsed and extracted:', errorMessage);
+          } catch {
+            errorMessage = responseData;
+            console.log('📝 Could not parse, using as is:', errorMessage);
+          }
+        }
+
+        console.log('🚨 Final error message:', errorMessage);
+        throw new Error(errorMessage);
+      }
+
+      // Verificar que tenemos la URL
+      const { url } = typeof responseData === 'object' ? responseData : { url: null };
+
+      if (!url) {
+        console.error('❌ No URL in response:', responseData);
+        throw new Error('No se recibió URL de checkout de Stripe');
+      }
+
+      console.log('✅ Stripe Checkout URL received:', url);
+      console.log('🔄 Redirecting to Stripe...');
+
+      // Redirect to Stripe Checkout
+      window.location.href = url;
     } catch (err) {
-      console.error('❌ Error subscribing:', err);
-      setError(err instanceof Error ? err.message : 'Error al suscribirse');
+      console.log('❌ CATCH BLOCK REACHED');
+      console.log('❌ Error type:', typeof err);
+      console.log('❌ Error:', err);
+      console.log('❌ Error message:', err instanceof Error ? err.message : 'Not an Error object');
+      console.log('❌ Error stack:', err instanceof Error ? err.stack : 'No stack');
+
+      console.error('❌ Error completo:', {
+        error: err,
+        message: err instanceof Error ? err.message : 'Unknown error',
+        stack: err instanceof Error ? err.stack : undefined,
+        stringified: JSON.stringify(err, Object.getOwnPropertyNames(err)),
+      });
+
+      setError(err instanceof Error ? err.message : 'Error inesperado al procesar la suscripción');
     } finally {
       setProcessing(false);
     }
@@ -241,7 +289,6 @@ export default function SubscriptionPage() {
       const backendUrl = 'http://localhost:3000';
 
       const response = await fetch(`${backendUrl}/subscription/${userSubscription.id}`, {
-        // ← subscription
         method: 'PUT',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -279,7 +326,7 @@ export default function SubscriptionPage() {
     setTimeout(() => successMsg.remove(), 4000);
   };
 
-  const freePlan = plans.find((p) => p.price === 0 || p.name.toLowerCase().includes('gratuito'));
+  // Solo mostrar plan Premium
   const premiumPlan = plans.find((p) => p.price > 0 || p.name.toLowerCase().includes('premium'));
 
   const hasActiveSubscription = !!(
@@ -385,108 +432,8 @@ export default function SubscriptionPage() {
         </motion.div>
 
         {/* Plans Grid */}
-        <div className="grid lg:grid-cols-2 gap-8 mb-12 max-w-6xl mx-auto relative z-10">
-          {/* FREE PLAN */}
-          {freePlan && (
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.2 }}
-              className={`bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl hover:shadow-2xl transition-all border-2 overflow-hidden flex flex-col ${
-                hasActiveSubscription && userSubscription?.planId === freePlan.id
-                  ? 'border-green-500 ring-2 ring-green-500'
-                  : 'border-white/50'
-              }`}
-            >
-              <div className="bg-gradient-to-r from-gray-600 via-gray-700 to-gray-800 p-8 text-white relative overflow-hidden">
-                <div className="absolute top-0 right-0 -mt-4 -mr-4 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
-                <div className="relative z-10">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="p-3 bg-white/20 backdrop-blur-sm rounded-xl">
-                      <Eye className="w-8 h-8 text-white" />
-                    </div>
-                    <div>
-                      <h3 className="text-3xl font-bold">{freePlan.name}</h3>
-                      <p className="text-white/90 mt-1">{freePlan.description}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-baseline gap-3">
-                    <span className="text-6xl font-bold">${freePlan.price}</span>
-                    <div>
-                      <div className="text-white/90 text-xl">MXN/mes</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="p-8 flex-1 flex flex-col">
-                <div className="space-y-4 mb-8 flex-1">
-                  <h4 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-                    <Sparkles className="w-5 h-5 text-gray-600" />
-                    Características
-                  </h4>
-
-                  {[
-                    { text: 'Perfil básico de proveedor', included: true },
-                    { text: 'Hasta 5 visualizaciones/mes', included: true },
-                    { text: 'Búsquedas estándar', included: true },
-                    { text: 'Contacto básico', included: true },
-                    { text: 'Soporte 48hrs', included: true },
-                    { text: 'Badge Premium', included: false },
-                    { text: 'Prioridad', included: false },
-                  ].map((feature, idx) => (
-                    <div key={idx} className="flex items-start gap-3">
-                      <div
-                        className={`p-1 rounded-full mt-0.5 ${
-                          feature.included ? 'bg-gray-200' : 'bg-gray-100'
-                        }`}
-                      >
-                        {feature.included ? (
-                          <Check className="w-5 h-5 text-gray-600" />
-                        ) : (
-                          <div className="w-5 h-5 flex items-center justify-center">
-                            <div className="w-1 h-1 bg-gray-400 rounded-full"></div>
-                          </div>
-                        )}
-                      </div>
-                      <span
-                        className={
-                          feature.included ? 'text-gray-700' : 'text-gray-400 line-through'
-                        }
-                      >
-                        {feature.text}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-
-                <button
-                  onClick={() => handleSubscribe(freePlan.id, freePlan.name, freePlan.price)}
-                  disabled={
-                    processing ||
-                    (hasActiveSubscription && userSubscription?.planId === freePlan.id)
-                  }
-                  className="w-full text-lg py-4 bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 text-white rounded-xl shadow-lg transition-all font-bold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                >
-                  {processing ? (
-                    <Loader2 className="w-6 h-6 animate-spin" />
-                  ) : hasActiveSubscription && userSubscription?.planId === freePlan.id ? (
-                    <>
-                      <Check className="w-6 h-6" />
-                      Plan Activo
-                    </>
-                  ) : (
-                    <>
-                      Comenzar Gratis
-                      <ArrowRight className="w-6 h-6" />
-                    </>
-                  )}
-                </button>
-              </div>
-            </motion.div>
-          )}
-
-          {/* PREMIUM PLAN */}
+        <div className="max-w-2xl mx-auto mb-12 relative z-10">
+          {/* SOLO PREMIUM PLAN */}
           {premiumPlan && (
             <motion.div
               initial={{ opacity: 0, x: 20 }}

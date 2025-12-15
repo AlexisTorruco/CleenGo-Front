@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
+import PremiumBadge from '../components/PremiumBadge';
 import {
   Calendar,
   DollarSign,
@@ -23,6 +24,7 @@ import {
   Check,
   X,
   Bell,
+  Crown,
 } from 'lucide-react';
 
 // ============================================
@@ -40,8 +42,8 @@ interface UserProfile {
   country?: string;
   postalCode?: string;
   about?: string;
-  days?: string[]; // ← Agregar esta
-  hours?: string[]; // ← Agregar esta
+  days?: string[];
+  hours?: string[];
 }
 
 interface Appointment {
@@ -66,6 +68,16 @@ interface DashboardStats {
   pendingRequests: number;
 }
 
+interface Subscription {
+  id: string;
+  providerId: string;
+  planId: string;
+  paymentStatus: boolean;
+  isActive: boolean;
+  startDate: string;
+  endDate?: string;
+}
+
 // ============================================
 // COMPONENTE
 // ============================================
@@ -79,6 +91,8 @@ export default function ProviderDashboard() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [pendingAppointments, setPendingAppointments] = useState<Appointment[]>([]);
   const [processingId, setProcessingId] = useState<string | null>(null);
+  const [isPremium, setIsPremium] = useState(false);
+  const [checkingPremium, setCheckingPremium] = useState(true);
 
   const [stats, setStats] = useState<DashboardStats>({
     completedServices: 0,
@@ -121,6 +135,37 @@ export default function ProviderDashboard() {
       console.log('👤 Profile data loaded:', profileData);
       setProfile(profileData);
 
+      // ========================================
+      // Verificar Premium
+      // ========================================
+      try {
+        setCheckingPremium(true);
+        const subsResponse = await fetch(`${backendUrl}/subscription`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          cache: 'no-store',
+        });
+
+        if (subsResponse.ok) {
+          const allSubscriptions: Subscription[] = await subsResponse.json();
+          const mySubscription = Array.isArray(allSubscriptions)
+            ? allSubscriptions.find(
+                (sub: Subscription) =>
+                  sub.providerId === user.id && sub.paymentStatus === true && sub.isActive === true
+              )
+            : null;
+
+          setIsPremium(!!mySubscription);
+          console.log(mySubscription ? '✅ User is Premium' : 'ℹ️ User is not Premium');
+        }
+      } catch (err) {
+        console.error('Error checking premium:', err);
+      } finally {
+        setCheckingPremium(false);
+      }
+
       // Fetch appointments
       const appointmentsRes = await fetch(`${backendUrl}/appointments`, {
         headers: {
@@ -139,18 +184,15 @@ export default function ProviderDashboard() {
           allAppointments = Array.isArray(data) ? data : data.appointments || [];
         }
 
-        // Filter for this provider
         const providerAppointments = allAppointments.filter((apt) => apt.providerId === user.id);
         console.log('📅 Provider appointments:', providerAppointments.length);
 
-        // Separate pending from others
         const pending = providerAppointments.filter((apt) => apt.status === 'pending');
         const nonPending = providerAppointments.filter((apt) => apt.status !== 'pending');
 
         setPendingAppointments(pending);
         setAppointments(nonPending);
 
-        // Calculate stats
         const completed = providerAppointments.filter((apt) => apt.status === 'completed').length;
         const upcoming = providerAppointments.filter(
           (apt) => apt.status === 'scheduled' || apt.status === 'in-progress'
@@ -174,14 +216,6 @@ export default function ProviderDashboard() {
           totalEarned,
           averageRating: Math.round(averageRating * 10) / 10,
           pendingRequests: pending.length,
-        });
-
-        console.log('📊 Stats calculated:', {
-          completed,
-          upcoming,
-          pending: pending.length,
-          totalEarned,
-          averageRating,
         });
       }
     } catch (err) {
@@ -217,10 +251,8 @@ export default function ProviderDashboard() {
 
       console.log(`✅ Appointment ${action}ed:`, appointmentId);
 
-      // Reload data
       await fetchData();
 
-      // Show success message
       const successMsg = document.createElement('div');
       successMsg.className =
         'fixed top-4 right-4 bg-emerald-500 text-white px-6 py-3 rounded-xl shadow-lg z-50 flex items-center gap-2';
@@ -238,28 +270,19 @@ export default function ProviderDashboard() {
   };
 
   useEffect(() => {
-    console.log('🔍 ProviderDashboard - Checking auth...');
-    console.log('👤 User:', user);
-    console.log('🔑 Token:', token ? 'Exists ✅' : 'Missing ❌');
-
     if (!user || !token) {
-      console.log('❌ No user or token, redirecting to login');
       router.push('/login');
       return;
     }
 
     if (user.role !== 'provider') {
-      console.log('❌ Not a provider, redirecting to dashboard');
       router.push('/dashboard');
       return;
     }
 
-    console.log('✅ Auth OK, fetching data...');
     fetchData();
 
-    // Reload on window focus
     const handleFocus = () => {
-      console.log('👁️ Window focused - Reloading data...');
       fetchData();
     };
 
@@ -330,12 +353,11 @@ export default function ProviderDashboard() {
           animate={{ opacity: 1, y: 0 }}
           className="relative z-10 bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl border-2 border-white/50 overflow-hidden mb-8"
         >
-          {/* Top gradient bar */}
           <div className="h-2 bg-gradient-to-r from-blue-600 via-cyan-500 to-emerald-500"></div>
 
           <div className="p-8">
             <div className="flex flex-col md:flex-row items-center gap-6">
-              {/* Profile Image with glow */}
+              {/* Profile Image */}
               <div className="relative group">
                 <div className="absolute -inset-1 bg-gradient-to-r from-blue-500 via-cyan-500 to-emerald-500 rounded-full blur opacity-40 group-hover:opacity-75 transition-opacity"></div>
                 {profile?.profileImgUrl ? (
@@ -356,9 +378,14 @@ export default function ProviderDashboard() {
 
               {/* Profile Info */}
               <div className="flex-1 text-center md:text-left">
-                <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 via-cyan-600 to-emerald-600 bg-clip-text text-transparent mb-3">
-                  {profile?.name} {profile?.surname}
-                </h1>
+                {/* Nombre con Badge Premium */}
+                <div className="flex flex-col md:flex-row items-center md:items-start gap-3 mb-3">
+                  <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 via-cyan-600 to-emerald-600 bg-clip-text text-transparent">
+                    {profile?.name} {profile?.surname}
+                  </h1>
+                  {isPremium && <PremiumBadge size="large" />}
+                </div>
+
                 <div className="flex flex-col md:flex-row gap-4 text-gray-600 mb-4">
                   <div className="flex items-center justify-center md:justify-start gap-2">
                     <Mail className="w-4 h-4 text-blue-600" />
@@ -372,7 +399,6 @@ export default function ProviderDashboard() {
                   )}
                 </div>
 
-                {/* About */}
                 {profile?.about && (
                   <p className="text-gray-600 text-sm bg-blue-50/50 rounded-xl p-4 border border-blue-100">
                     {profile.about}
@@ -380,7 +406,7 @@ export default function ProviderDashboard() {
                 )}
               </div>
 
-              {/* Rating Badge & Edit Button */}
+              {/* Rating Badge & Buttons */}
               <div className="flex flex-col gap-3">
                 <div className="bg-gradient-to-br from-blue-500 via-cyan-500 to-emerald-500 rounded-2xl p-6 text-white text-center shadow-xl">
                   <Award className="w-8 h-8 mx-auto mb-2" />
@@ -402,44 +428,21 @@ export default function ProviderDashboard() {
                   <Edit className="w-4 h-4" />
                   Editar
                 </motion.button>
-              </div>
 
-              {/* Address Section */}
-              {profile?.address && (
-                <div className="flex items-start gap-3 text-gray-600 text-sm bg-purple-50/50 rounded-xl p-4 border border-purple-100 mt-4">
-                  <MapPin className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
-                  <div className="flex flex-col gap-2 text-left">
-                    <div>
-                      <span className="font-semibold text-gray-700">Dirección: </span>
-                      <span>{profile.address}</span>
-                    </div>
-                    {profile.city && (
-                      <div>
-                        <span className="font-semibold text-gray-700">Ciudad: </span>
-                        <span>{profile.city}</span>
-                      </div>
-                    )}
-                    {profile.state && (
-                      <div>
-                        <span className="font-semibold text-gray-700">Estado: </span>
-                        <span>{profile.state}</span>
-                      </div>
-                    )}
-                    {profile.country && (
-                      <div>
-                        <span className="font-semibold text-gray-700">País: </span>
-                        <span>{profile.country}</span>
-                      </div>
-                    )}
-                    {profile.postalCode && (
-                      <div>
-                        <span className="font-semibold text-gray-700">Código Postal: </span>
-                        <span>{profile.postalCode}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => router.push('/subscriptions')}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all font-semibold ${
+                    isPremium
+                      ? 'bg-gradient-to-r from-yellow-500 to-amber-500 text-white hover:shadow-lg'
+                      : 'bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:shadow-lg'
+                  }`}
+                >
+                  <Crown className="w-4 h-4" />
+                  {isPremium ? 'Mi Premium' : 'Hazte Premium'}
+                </motion.button>
+              </div>
             </div>
 
             {/* Availability */}
@@ -481,8 +484,99 @@ export default function ProviderDashboard() {
                 </div>
               </div>
             )}
+
+            {/* Address Section */}
+            {profile?.address && (
+              <div className="mt-6 pt-6 border-t border-gray-200">
+                <div className="flex items-start gap-3 text-gray-600 text-sm bg-purple-50/50 rounded-xl p-4 border border-purple-100">
+                  <MapPin className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
+                  <div className="flex flex-col gap-2 text-left">
+                    <div>
+                      <span className="font-semibold text-gray-700">Dirección: </span>
+                      <span>{profile.address}</span>
+                    </div>
+                    {profile.city && (
+                      <div>
+                        <span className="font-semibold text-gray-700">Ciudad: </span>
+                        <span>{profile.city}</span>
+                      </div>
+                    )}
+                    {profile.state && (
+                      <div>
+                        <span className="font-semibold text-gray-700">Estado: </span>
+                        <span>{profile.state}</span>
+                      </div>
+                    )}
+                    {profile.country && (
+                      <div>
+                        <span className="font-semibold text-gray-700">País: </span>
+                        <span>{profile.country}</span>
+                      </div>
+                    )}
+                    {profile.postalCode && (
+                      <div>
+                        <span className="font-semibold text-gray-700">Código Postal: </span>
+                        <span>{profile.postalCode}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </motion.div>
+
+        {/* Banner para usuarios gratuitos */}
+        {!isPremium && !checkingPremium && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="relative z-10 bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-orange-200 rounded-2xl p-6 mb-8"
+          >
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              <div className="flex-1">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="p-2 bg-orange-200 rounded-lg">
+                    <AlertCircle className="w-5 h-5 text-orange-700" />
+                  </div>
+                  <h3 className="text-xl font-bold text-orange-900">
+                    Estás usando la versión Gratuita
+                  </h3>
+                </div>
+                <p className="text-orange-800 mb-3">
+                  Tu cuenta tiene limitaciones. Actualiza a Premium para desbloquear:
+                </p>
+                <ul className="space-y-2">
+                  <li className="flex items-center gap-2 text-orange-700">
+                    <Check className="w-4 h-4" />
+                    <span>Clientes ilimitados (actualmente: máx. 3)</span>
+                  </li>
+                  <li className="flex items-center gap-2 text-orange-700">
+                    <Check className="w-4 h-4" />
+                    <span>Aparecer destacado en búsquedas</span>
+                  </li>
+                  <li className="flex items-center gap-2 text-orange-700">
+                    <Check className="w-4 h-4" />
+                    <span>Badge Premium visible</span>
+                  </li>
+                  <li className="flex items-center gap-2 text-orange-700">
+                    <Check className="w-4 h-4" />
+                    <span>Mayor visibilidad y alcance</span>
+                  </li>
+                </ul>
+              </div>
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => router.push('/subscriptions')}
+                className="bg-gradient-to-r from-orange-500 to-amber-600 text-white px-8 py-4 rounded-xl font-bold shadow-lg hover:shadow-xl transition-all flex items-center gap-2 whitespace-nowrap"
+              >
+                <Crown className="w-5 h-5" />
+                Hazte Premium
+              </motion.button>
+            </div>
+          </motion.div>
+        )}
 
         {/* Stats Grid */}
         <div className="relative z-10 grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
@@ -704,7 +798,6 @@ export default function ProviderDashboard() {
           transition={{ delay: 0.6 }}
           className="relative z-10 bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl border-2 border-white/50 p-8"
         >
-          {/* Section Header */}
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-3xl font-bold flex items-center gap-3">
               <div className="p-3 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-xl">
