@@ -29,7 +29,7 @@ const Dashboard = () => {
     );
   }
 
-  // Renderizar el dashboard según el rol del usuario
+  // Renderizar el dashboard según el rol del usuario ...
   if (user.role === 'client') {
     return <ClientDashboard />;
   }
