@@ -1,5 +1,5 @@
 'use client';
-
+//importaciones maestras
 import Image from 'next/image';
 import { useForm } from 'react-hook-form';
 import { useRouter } from 'next/navigation';

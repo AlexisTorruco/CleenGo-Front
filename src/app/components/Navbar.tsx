@@ -13,6 +13,7 @@ export default function Navbar() {
   const [isMounted, setIsMounted] = useState(false);
 
   // Marcamos cuando el componente ya se montó en el cliente
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     setIsMounted(true);
   }, []);
@@ -47,6 +48,7 @@ export default function Navbar() {
             width={180}
             height={60}
             className="h-12 w-auto"
+            priority
           />
         </Link>
 
@@ -66,7 +68,11 @@ export default function Navbar() {
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 strokeWidth={2}
-                d={isOpen ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16M4 18h16"}
+                d={
+                  isOpen
+                    ? "M6 18L18 6M6 6l12 12"
+                    : "M4 6h16M4 12h16M4 18h16"
+                }
               />
             </svg>
           </button>
@@ -74,7 +80,6 @@ export default function Navbar() {
 
         {/* Menu */}
         <div
-          suppressHydrationWarning
           className={`lg:flex lg:items-center lg:gap-6 ${
             isOpen
               ? "flex flex-col w-full mt-4 space-y-4 bg-white p-4 rounded-lg shadow-lg absolute top-16 left-0 lg:static lg:shadow-none lg:p-0"
@@ -84,7 +89,7 @@ export default function Navbar() {
           {/* ------------------- */}
           {/* GUEST NAVBAR       */}
           {/* ------------------- */}
-          {!effectiveUser && (
+          {!effectiveUser ? (
             <div className="flex flex-col lg:flex-row lg:items-center lg:gap-6 gap-3 w-full">
               <Link
                 href="/client/home"
@@ -122,7 +127,7 @@ export default function Navbar() {
                 Iniciar Sesión
               </Link>
             </div>
-          )}
+          ) : null}
 
           {/* ------------------- */}
           {/* CLIENT NAVBAR       */}
