@@ -643,7 +643,7 @@ export default function Navbar() {
                 onClick={handleMenuItemClick}
                 className="text-gray-700 font-medium hover:text-teal-500 transition"
               >
-                Suscripción
+                Suscripci贸n
               </Link>
               <Link
                 href="/blog"
@@ -657,7 +657,7 @@ export default function Navbar() {
                 onClick={handleMenuItemClick}
                 className="bg-teal-500 text-white px-6 py-2.5 rounded-lg font-semibold hover:bg-teal-600 transition shadow-sm text-center"
               >
-                Iniciar Sesión
+                Iniciar Sesi贸n
               </Link>
             </div>
           )}
@@ -679,7 +679,6 @@ export default function Navbar() {
               >
                 Proveedores
               </Link>
-
               <Link
                 href="/blog"
                 onClick={handleMenuItemClick}
@@ -737,7 +736,7 @@ export default function Navbar() {
                 onClick={handleLogout}
                 className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg font-medium hover:bg-gray-200 transition"
               >
-                Cerrar Sesión
+                Cerrar Sesi贸n
               </button>
             </div>
           )}
@@ -764,7 +763,7 @@ export default function Navbar() {
                 onClick={handleMenuItemClick}
                 className="text-gray-700 font-medium hover:text-teal-500 transition text-center"
               >
-                Suscripción
+                Suscripci贸n
               </Link>
               <Link
                 href="/blog"
