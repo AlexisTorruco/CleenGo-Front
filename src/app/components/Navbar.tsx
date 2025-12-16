@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useAuth } from "@/app/contexts/AuthContext";
+import { io, Socket } from "socket.io-client";
 
 type UnreadSummaryItem = {
   appointmentId: string;
@@ -48,11 +49,9 @@ export default function Navbar() {
   const [apptLoading, setApptLoading] = useState<Record<string, boolean>>({});
 
   const notifRef = useRef<HTMLDivElement | null>(null);
+  const socketRef = useRef<Socket | null>(null);
 
-  const backendUrl =
-    process.env.NEXT_PUBLIC_BACKEND_URL ||
-    process.env.VITE_BACKEND_URL ||
-    "http://localhost:3000";
+  const backendUrl = process.env.VITE_BACKEND_URL;
 
   // Marcamos cuando el componente ya se montó en el cliente
   useEffect(() => {
@@ -74,6 +73,8 @@ export default function Navbar() {
     setIsOpen(false);
     setNotifOpen(false);
     setSelectOpenUserId(null);
+    socketRef.current?.disconnect();
+    socketRef.current = null;
   };
 
   // ✅ Agrupar unread por persona
@@ -234,6 +235,49 @@ export default function Navbar() {
     window.addEventListener("focus", onFocus);
     return () => window.removeEventListener("focus", onFocus);
   }, [effectiveUser, token, fetchUnreadSummary]);
+
+  useEffect(() => {
+    if (!backendUrl || !token || !effectiveUser) return;
+
+    // evitar duplicados
+    socketRef.current?.disconnect();
+    socketRef.current = null;
+
+    const s = io(backendUrl, {
+      transports: ["websocket", "polling"],
+      auth: { token },
+      reconnection: true,
+      reconnectionDelay: 500,
+      reconnectionDelayMax: 2000,
+    });
+
+    socketRef.current = s;
+
+    s.on("connect", () => {
+      // opcional: al conectar, refrescar snapshot por si acaso
+      fetchUnreadSummary();
+    });
+
+    // ✅ EVENTO QUE EMITE EL BACK
+    s.on("unreadSummaryUpdated", (payload: any) => {
+      // si por alguna razón llega otro user, ignoramos
+      if (!effectiveUser?.id) return;
+      if (
+        payload?.userId &&
+        String(payload.userId) !== String(effectiveUser.id)
+      )
+        return;
+
+      const summary = Array.isArray(payload?.summary) ? payload.summary : [];
+      setUnreadSummary(summary);
+    });
+
+    return () => {
+      s.off();
+      s.disconnect();
+      socketRef.current = null;
+    };
+  }, [backendUrl, token, effectiveUser, fetchUnreadSummary]);
 
   // Cerrar dropdown al hacer click afuera
   useEffect(() => {
