@@ -4,10 +4,15 @@ import Link from "next/link";
 import Image from "next/image";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/app/contexts/AuthContext";
+import Swal from "sweetalert2";
+import { useRouter } from "next/navigation";
+
 
 export default function Navbar() {
   const { user, logout } = useAuth();
   const role = user?.role;
+  const router = useRouter();
+
 
   const [isOpen, setIsOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
@@ -28,9 +33,32 @@ export default function Navbar() {
   };
 
   // Logout que también cierra el menú
-  const handleLogout = () => {
-    logout();
-    setIsOpen(false);
+  const handleLogout = async () => {
+    const result = await Swal.fire({
+      title: "¿Cerrar sesión?",
+      text: "Tu sesión se cerrará",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#14B8A6",
+      cancelButtonColor: "#d33",
+      confirmButtonText: "Sí, cerrar sesión",
+      cancelButtonText: "Cancelar",
+    });
+
+    if (result.isConfirmed) {
+      logout();
+      setIsOpen(false);
+
+      await Swal.fire({
+        icon: "success",
+        title: "Sesión cerrada",
+        text: "Has salido correctamente",
+        timer: 1500,
+        showConfirmButton: false,
+      });
+
+      router.push("/"); // 👉 landing
+    }
   };
 
   return (
@@ -80,11 +108,10 @@ export default function Navbar() {
 
         {/* Menu */}
         <div
-          className={`lg:flex lg:items-center lg:gap-6 ${
-            isOpen
+          className={`lg:flex lg:items-center lg:gap-6 ${isOpen
               ? "flex flex-col w-full mt-4 space-y-4 bg-white p-4 rounded-lg shadow-lg absolute top-16 left-0 lg:static lg:shadow-none lg:p-0"
               : "hidden lg:flex"
-          }`}
+            }`}
         >
           {/* ------------------- */}
           {/* GUEST NAVBAR       */}

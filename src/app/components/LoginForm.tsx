@@ -107,6 +107,7 @@ export default function LoginForm() {
     try {
       const res = await login({ email, password });
       loginContext(res.user, res.accessToken);
+      document.cookie = `token=${res.accessToken}; path=/`;
 
       Swal.fire({
         icon: 'success',
@@ -116,6 +117,7 @@ export default function LoginForm() {
       }).then(() => {
         router.push('/');
       });
+      
     } catch (err: unknown) {
       const error = err as { response?: { data?: { message?: string } } };
       const message = error?.response?.data?.message || 'Credenciales no válidas';
