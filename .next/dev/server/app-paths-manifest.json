@@ -1,21 +1,6 @@
 {
-<<<<<<< HEAD
-<<<<<<< HEAD
-  "/_not-found/page": "app/_not-found/page.js",
-  "/admin/dashboard/page": "app/admin/dashboard/page.js",
   "/client/home/page": "app/client/home/page.js",
   "/client/providers/page": "app/client/providers/page.js",
   "/login/page": "app/login/page.js",
-=======
-=======
->>>>>>> ae8340a524f900b74d641ba20f4a1007fb720a00
-  "/client/profile/edit/page": "app/client/profile/edit/page.js",
-  "/client/profile/page": "app/client/profile/page.js",
-  "/login/page": "app/login/page.js",
-  "/oauth/callback/page": "app/oauth/callback/page.js",
-<<<<<<< HEAD
->>>>>>> bb4da00b68c54c8ffe483e33a950409e58c86929
-=======
->>>>>>> ae8340a524f900b74d641ba20f4a1007fb720a00
   "/page": "app/page.js"
 }
