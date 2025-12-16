@@ -1,3 +1,4 @@
+//src/app/client/providers/page.tsx
 "use client";
 
 import { useState, useEffect } from "react";
@@ -8,14 +9,15 @@ import { useAuth } from "../../contexts/AuthContext";
 
 // 🔹 AJUSTADO PARA COINCIDIR CON EL BACK (Swagger)
 interface Provider {
-  id: string; // viene como uuid en el back
+  id: string;
   name: string;
   surname?: string;
+  email?: string;
   rating: number;
-  profileImgUrl?: string | null; // <- campo real del back
-  services?: string[]; // opcional por si lo agregan después
-  days: string[]; // "days" en swagger
-  hours: string[]; // "hours" en swagger
+  profileImgUrl?: string | null;
+  services?: string[];
+  days: string[];
+  hours: string[];
   about?: string;
   isActive?: boolean;
 }
@@ -57,7 +59,7 @@ export default function ProvidersPage() {
 
     setLoading(true);
     try {
-      console.log("➡️ Cargando proveedores desde:", `${backendUrl}provider`);
+      console.log("➡️ Cargando proveedores desde:", `${backendUrl}/provider`);
 
       const response = await fetch(`${backendUrl}/provider`);
 
@@ -162,7 +164,11 @@ export default function ProvidersPage() {
   };
 
   // Agendar cita
-  const handleBookAppointment = (providerId: string, providerName: string) => {
+  const handleBookAppointment = (
+    providerId: string,
+    providerName: string,
+    providerEmail?: string
+  ) => {
     if (!user) {
       Swal.fire({
         icon: "warning",
@@ -174,30 +180,41 @@ export default function ProvidersPage() {
         confirmButtonColor: "#22C55E",
         cancelButtonColor: "#6B7280",
       }).then((result) => {
-        if (result.isConfirmed) {
-          router.push("/login");
-        }
+        if (result.isConfirmed) router.push("/login");
       });
-    } else {
-      Swal.fire({
-        icon: "question",
-        title: `¿Agendar cita con ${providerName}?`,
-        text: "Serás redirigido para completar tu reserva",
-        showCancelButton: true,
-        confirmButtonText: "Continuar",
-        cancelButtonText: "Cancelar",
-        confirmButtonColor: "#22C55E",
-        cancelButtonColor: "#6B7280",
-      }).then((result) => {
-        if (result.isConfirmed) {
-          router.push(
-            `/client/appointments/create?providerId=${providerId}&providerName=${encodeURIComponent(
-              providerName
-            )}`
-          );
-        }
-      });
+      return;
     }
+
+    if (!providerEmail) {
+      Swal.fire({
+        icon: "error",
+        title: "Falta email del proveedor",
+        text:
+          "El backend requiere providerEmail para crear la cita. " +
+          "Necesitamos que el endpoint /provider lo incluya o crear un endpoint para obtenerlo por id.",
+        confirmButtonColor: "#22C55E",
+      });
+      return;
+    }
+
+    Swal.fire({
+      icon: "question",
+      title: `¿Agendar cita con ${providerName}?`,
+      text: "Serás redirigido para completar tu reserva",
+      showCancelButton: true,
+      confirmButtonText: "Continuar",
+      cancelButtonText: "Cancelar",
+      confirmButtonColor: "#22C55E",
+      cancelButtonColor: "#6B7280",
+    }).then((result) => {
+      if (result.isConfirmed) {
+        router.push(
+          `/client/appointments/create?providerId=${providerId}` +
+            `&providerName=${encodeURIComponent(providerName)}` +
+            `&providerEmail=${encodeURIComponent(providerEmail)}`
+        );
+      }
+    });
   };
 
   // Solo usamos user para layout cuando ya estamos en el cliente
@@ -455,7 +472,8 @@ export default function ProvidersPage() {
                             onClick={() =>
                               handleBookAppointment(
                                 provider.id.toString(),
-                                provider.name
+                                provider.name,
+                                provider.email
                               )
                             }
                             className="w-full bg-[#22C55E] text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-[#16A34A] transition-colors mt-1"
