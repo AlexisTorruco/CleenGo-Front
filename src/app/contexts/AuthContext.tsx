@@ -9,7 +9,7 @@ interface User {
   name: string;
   surname?: string;
   profileImgUrl?: string;
-  role: 'client' | 'provider';
+  role: 'client' | 'provider' | 'admin';
 }
 
 interface AuthContextType {
@@ -68,7 +68,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const login = (rawUser: AuthUser | Record<string, unknown>, token: string) => {
     // Validar y normalizar el rol
-    const validRoles = ['client', 'provider'];
+    const validRoles = ['client', 'provider', 'admin'];
     const role = validRoles.includes(String(rawUser.role)) ? String(rawUser.role) : 'client';
 
     const normalizedUser: User = {
@@ -76,7 +76,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       email: String(rawUser.email),
       name: String(rawUser.name || (rawUser as Record<string, unknown>).full_name || ''),
       surname: String(rawUser.surname || ''),
-      role: role as 'client' | 'provider',
+      role: role as 'client' | 'provider' | 'admin',
     };
 
     setUser(normalizedUser);
@@ -85,6 +85,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (typeof window !== 'undefined') {
       localStorage.setItem('user', JSON.stringify(normalizedUser));
       localStorage.setItem('token', token);
+      document.cookie = `token=${token}; path=/`;
+
+
     }
   };
 
@@ -95,6 +98,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('user');
       localStorage.removeItem('token');
+      document.cookie = 'token=; Max-Age=0; path=/';
+
     }
   };
 

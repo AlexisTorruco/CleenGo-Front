@@ -99,7 +99,7 @@ export default function ProviderFilters({
 
     Swal.fire({
       icon: "info",
-      title: "Filtros limpiados",
+      title: "Filtros limpios",
       text: "Todos los filtros han sido reseteados",
       showConfirmButton: true,
       confirmButtonText: "Aceptar",

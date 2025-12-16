@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, FormEvent, useMemo } from 'react';
+import { useState, FormEvent, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -74,7 +74,7 @@ export default function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
 
   const router = useRouter();
-  const { login: loginContext } = useAuth();
+  const { login: loginContext, user } = useAuth();
 
   // 🔵 VALIDACIÓN DINÁMICA DEL EMAIL
   const isEmailValid = useMemo(() => {
@@ -92,6 +92,12 @@ export default function LoginForm() {
     };
   }, [password]);
 
+  useEffect(() => {
+    if (user) {
+      router.replace('/client/home'); // o '/'
+    }
+  }, [user, router]);
+
   const allValid = Object.values(passwordRules).every(Boolean);
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
@@ -101,6 +107,7 @@ export default function LoginForm() {
     try {
       const res = await login({ email, password });
       loginContext(res.user, res.accessToken);
+      document.cookie = `token=${res.accessToken}; path=/`;
 
       Swal.fire({
         icon: 'success',
@@ -110,6 +117,7 @@ export default function LoginForm() {
       }).then(() => {
         router.push('/');
       });
+      
     } catch (err: unknown) {
       const error = err as { response?: { data?: { message?: string } } };
       const message = error?.response?.data?.message || 'Credenciales no válidas';
@@ -128,9 +136,8 @@ export default function LoginForm() {
   // Reglas con estilo mejorado
   const renderRule = (ok: boolean, text: string) => (
     <p
-      className={`text-xs flex items-center gap-2 transition-colors ${
-        ok ? 'text-teal-600' : 'text-gray-400'
-      }`}
+      className={`text-xs flex items-center gap-2 transition-colors ${ok ? 'text-teal-600' : 'text-gray-400'
+        }`}
       key={text}
     >
       <span className={`font-medium text-sm ${ok ? 'scale-110' : ''}`}>{ok ? '✔' : '•'}</span>
@@ -169,10 +176,9 @@ export default function LoginForm() {
                   placeholder="tu@email.com"
                   className={`w-full border rounded-xl px-4 py-3.5 pl-12 text-base
                     focus:outline-none focus:ring-2 transition-all
-                    ${
-                      email.length === 0
-                        ? 'border-gray-300 focus:border-[#14B8A6] focus:ring-[#14B8A6]/20'
-                        : isEmailValid
+                    ${email.length === 0
+                      ? 'border-gray-300 focus:border-[#14B8A6] focus:ring-[#14B8A6]/20'
+                      : isEmailValid
                         ? 'border-teal-500 focus:border-teal-600 focus:ring-teal-500/20'
                         : 'border-red-400 focus:border-red-500 focus:ring-red-400/20'
                     }
@@ -194,10 +200,9 @@ export default function LoginForm() {
               <div
                 className={`
                   flex items-center rounded-xl px-4 py-3.5 bg-white border transition-all
-                  ${
-                    password.length === 0
-                      ? 'border-gray-300 focus-within:border-[#14B8A6] focus-within:ring-2 focus-within:ring-[#14B8A6]/20'
-                      : allValid
+                  ${password.length === 0
+                    ? 'border-gray-300 focus-within:border-[#14B8A6] focus-within:ring-2 focus-within:ring-[#14B8A6]/20'
+                    : allValid
                       ? 'border-teal-500 focus-within:border-teal-600 focus-within:ring-2 focus-within:ring-teal-500/20'
                       : 'border-red-400 focus-within:border-red-500 focus-within:ring-2 focus-within:ring-red-400/20'
                   }

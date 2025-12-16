@@ -18,11 +18,13 @@
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "react-hook-form": "^7.66.1",
+    "socket.io-client": "^4.8.1",
     "sweetalert2": "^11.26.3"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/axios": "^0.9.36",
+    "@types/jquery": "^3.5.33",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
