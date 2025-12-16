@@ -51,10 +51,7 @@ export default function Navbar() {
   const notifRef = useRef<HTMLDivElement | null>(null);
   const socketRef = useRef<Socket | null>(null);
 
-  const backendUrl =
-    process.env.NEXT_PUBLIC_BACKEND_URL ||
-    process.env.VITE_BACKEND_URL ||
-    "http://localhost:3000";
+  const backendUrl = process.env.VITE_BACKEND_URL;
 
   // Marcamos cuando el componente ya se montó en el cliente
   useEffect(() => {

@@ -41,10 +41,7 @@ export default function ChatPageClient() {
   const router = useRouter();
   const { user, token } = useAuth();
 
-  const backendUrl =
-    process.env.NEXT_PUBLIC_BACKEND_URL ||
-    process.env.VITE_BACKEND_URL ||
-    "http://localhost:3000";
+  const backendUrl = process.env.VITE_BACKEND_URL;
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(true);
