@@ -1,9 +1,9 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
-import { useAuth } from "../contexts/AuthContext";
-import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
+import { useState, useEffect } from 'react';
+import { useAuth } from '../contexts/AuthContext';
+import { useRouter } from 'next/navigation';
+import { motion } from 'framer-motion';
 import {
   User,
   Mail,
@@ -20,7 +20,7 @@ import {
   AlertCircle,
   Upload,
   X,
-} from "lucide-react";
+} from 'lucide-react';
 
 // ============================================
 // INTERFACES
@@ -56,7 +56,7 @@ export default function EditProfile() {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [deleteInput, setDeleteInput] = useState("");
+  const [deleteInput, setDeleteInput] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
@@ -66,27 +66,27 @@ export default function EditProfile() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   const [formData, setFormData] = useState<UserProfileForm>({
-    name: "",
-    surname: "",
-    email: "",
-    phone: "",
-    birthDate: "",
-    profileImgUrl: "",
+    name: '',
+    surname: '',
+    email: '',
+    phone: '',
+    birthDate: '',
+    profileImgUrl: '',
 
-    street: "",
-    extNumber: "",
-    intNumber: "",
-    neighborhood: "",
+    street: '',
+    extNumber: '',
+    intNumber: '',
+    neighborhood: '',
 
-    city: "",
-    state: "",
-    country: "México",
-    postalCode: "",
+    city: '',
+    state: '',
+    country: 'México',
+    postalCode: '',
   });
 
   useEffect(() => {
     if (!user || !token) {
-      router.push("/login");
+      router.push('/login');
       return;
     }
 
@@ -100,49 +100,47 @@ export default function EditProfile() {
     setError(null);
 
     try {
-      const backendUrl = "http://localhost:3000";
+      const backendUrl = process.env.VITE_BACKEND_URL;
       const response = await fetch(`${backendUrl}/user/profile/${user.id}`, {
         headers: {
           Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
       });
 
       if (!response.ok) {
         if (response.status === 401) {
           logout();
-          router.push("/login");
+          router.push('/login');
           return;
         }
-        throw new Error("Error al cargar el perfil");
+        throw new Error('Error al cargar el perfil');
       }
 
       const data = await response.json();
 
       // De momento, usamos address completo recibido como "street"
       setFormData({
-        name: data.name || "",
-        surname: data.surname || "",
-        email: user.email || "",
-        phone: data.phone || "",
-        birthDate: data.birthDate || "",
-        profileImgUrl: data.profileImgUrl || "",
+        name: data.name || '',
+        surname: data.surname || '',
+        email: user.email || '',
+        phone: data.phone || '',
+        birthDate: data.birthDate || '',
+        profileImgUrl: data.profileImgUrl || '',
 
-        street: data.address || "",
-        extNumber: "",
-        intNumber: "",
-        neighborhood: "",
+        street: data.address || '',
+        extNumber: '',
+        intNumber: '',
+        neighborhood: '',
 
-        city: data.city || "",
-        state: data.state || "",
-        country: data.country || "México",
-        postalCode: data.postalCode || "",
+        city: data.city || '',
+        state: data.state || '',
+        country: data.country || 'México',
+        postalCode: data.postalCode || '',
       });
     } catch (err) {
-      console.error("Error fetching profile:", err);
-      setError(
-        err instanceof Error ? err.message : "Error al cargar los datos"
-      );
+      console.error('Error fetching profile:', err);
+      setError(err instanceof Error ? err.message : 'Error al cargar los datos');
     } finally {
       setLoading(false);
     }
@@ -157,21 +155,15 @@ export default function EditProfile() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const validTypes = [
-      "image/jpeg",
-      "image/jpg",
-      "image/png",
-      "image/webp",
-      "image/gif",
-    ];
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
     if (!validTypes.includes(file.type)) {
-      setError("Solo se permiten archivos de imagen (JPG, PNG, WEBP, GIF)");
+      setError('Solo se permiten archivos de imagen (JPG, PNG, WEBP, GIF)');
       return;
     }
 
     const maxSize = 5 * 1024 * 1024;
     if (file.size > maxSize) {
-      setError("La imagen no debe superar los 5MB");
+      setError('La imagen no debe superar los 5MB');
       return;
     }
 
@@ -192,31 +184,28 @@ export default function EditProfile() {
     setError(null);
 
     try {
-      const backendUrl = "http://localhost:3000";
+      const backendUrl = process.env.VITE_BACKEND_URL;
       const fd = new FormData();
-      fd.append("file", selectedFile);
+      fd.append('file', selectedFile);
 
-      const response = await fetch(
-        `${backendUrl}/file-upload/avatar/${user.id}`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-          body: fd,
-        }
-      );
+      const response = await fetch(`${backendUrl}/file-upload/avatar/${user.id}`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: fd,
+      });
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => null);
-        throw new Error(errorData?.message || "Error al subir la imagen");
+        throw new Error(errorData?.message || 'Error al subir la imagen');
       }
 
       const data = await response.json();
       const imageUrl = data.url || data.imageUrl || data.avatarUrl;
 
       if (!imageUrl) {
-        throw new Error("El servidor no devolvió una URL de imagen");
+        throw new Error('El servidor no devolvió una URL de imagen');
       }
 
       setFormData((prev) => ({ ...prev, profileImgUrl: imageUrl }));
@@ -224,8 +213,8 @@ export default function EditProfile() {
       setImagePreview(null);
       setSelectedFile(null);
     } catch (err) {
-      console.error("❌ Error uploading image:", err);
-      setError(err instanceof Error ? err.message : "Error al subir la imagen");
+      console.error('❌ Error uploading image:', err);
+      setError(err instanceof Error ? err.message : 'Error al subir la imagen');
     } finally {
       setUploadingImage(false);
     }
@@ -247,7 +236,7 @@ export default function EditProfile() {
     setSuccess(false);
 
     try {
-      const backendUrl = "http://localhost:3000";
+      const backendUrl = process.env.VITE_BACKEND_URL;
 
       // 👉 Armamos la línea base de dirección con los campos desglosados
       const addressParts: string[] = [];
@@ -257,8 +246,7 @@ export default function EditProfile() {
       if (formData.intNumber) addressParts.push(`Int. ${formData.intNumber}`);
       if (formData.neighborhood) addressParts.push(formData.neighborhood);
 
-      const baseAddress =
-        addressParts.length > 0 ? addressParts.join(", ") : null;
+      const baseAddress = addressParts.length > 0 ? addressParts.join(', ') : null;
 
       // fullAddress pensando ya en Google Maps a futuro
       const fullAddressParts: (string | null | undefined)[] = [
@@ -270,10 +258,22 @@ export default function EditProfile() {
       ];
 
       const fullAddress = fullAddressParts
-        .filter((p) => p && p.toString().trim() !== "")
-        .join(", ");
+        .filter((p) => p && p.toString().trim() !== '')
+        .join(', ');
 
-      const updateData: any = {
+      const updateData: {
+        name: string;
+        surname: string;
+        phone: string;
+        birthDate: string;
+        address: string | null;
+        city: string | null;
+        state: string | null;
+        country: string | null;
+        postalCode: string | null;
+        fullAddress: string | null;
+        profileImgUrl?: string;
+      } = {
         name: formData.name,
         surname: formData.surname,
         phone: formData.phone,
@@ -288,39 +288,31 @@ export default function EditProfile() {
         fullAddress: fullAddress || null,
       };
 
-      if (formData.profileImgUrl?.trim() !== "") {
+      if (formData.profileImgUrl?.trim() !== '') {
         updateData.profileImgUrl = formData.profileImgUrl;
       }
 
-      const response = await fetch(
-        `${backendUrl}/user/update-profile/${user.id}`,
-        {
-          method: "PUT",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(updateData),
-        }
-      );
+      const response = await fetch(`${backendUrl}/user/update-profile/${user.id}`, {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updateData),
+      });
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => null);
-        throw new Error(
-          errorData?.message ||
-            `Error al actualizar el perfil (${response.status})`
-        );
+        throw new Error(errorData?.message || `Error al actualizar el perfil (${response.status})`);
       }
 
       setSuccess(true);
       setTimeout(() => {
-        window.location.href = "/client/profile";
+        window.location.href = '/client/profile';
       }, 2000);
     } catch (err) {
-      console.error("Error updating profile:", err);
-      setError(
-        err instanceof Error ? err.message : "Error al guardar los cambios"
-      );
+      console.error('Error updating profile:', err);
+      setError(err instanceof Error ? err.message : 'Error al guardar los cambios');
     } finally {
       setSaving(false);
     }
@@ -329,7 +321,7 @@ export default function EditProfile() {
   const handleDeleteAccount = async () => {
     if (!user || !token) return;
 
-    if (deleteInput !== "ELIMINAR") {
+    if (deleteInput !== 'ELIMINAR') {
       setError('Debes escribir "ELIMINAR" para confirmar');
       return;
     }
@@ -338,29 +330,24 @@ export default function EditProfile() {
     setError(null);
 
     try {
-      const backendUrl = "http://localhost:3000";
-      const response = await fetch(
-        `${backendUrl}/user/delete-profile/${user.id}`,
-        {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      const backendUrl = process.env.VITE_BACKEND_URL;
+      const response = await fetch(`${backendUrl}/user/delete-profile/${user.id}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
 
       if (!response.ok) {
-        throw new Error("Error al eliminar la cuenta");
+        throw new Error('Error al eliminar la cuenta');
       }
 
       logout();
-      router.push("/");
+      router.push('/');
     } catch (err) {
-      console.error("Error deleting account:", err);
-      setError(
-        err instanceof Error ? err.message : "Error al eliminar la cuenta"
-      );
+      console.error('Error deleting account:', err);
+      setError(err instanceof Error ? err.message : 'Error al eliminar la cuenta');
     } finally {
       setDeleting(false);
     }
@@ -385,7 +372,7 @@ export default function EditProfile() {
           <div className="absolute top-0 right-0 w-96 h-96 bg-blue-300/20 rounded-full blur-3xl animate-pulse"></div>
           <div
             className="absolute bottom-0 left-0 w-96 h-96 bg-emerald-300/20 rounded-full blur-3xl animate-pulse"
-            style={{ animationDelay: "1s" }}
+            style={{ animationDelay: '1s' }}
           ></div>
         </div>
 
@@ -400,9 +387,7 @@ export default function EditProfile() {
               <CheckCircle className="w-8 h-8 text-white" />
             </div>
             <div className="flex-1">
-              <p className="font-bold text-emerald-900 text-lg">
-                ¡Perfil actualizado con éxito!
-              </p>
+              <p className="font-bold text-emerald-900 text-lg">¡Perfil actualizado con éxito!</p>
               <p className="text-emerald-700">Redirigiendo al dashboard...</p>
             </div>
           </motion.div>
@@ -419,9 +404,7 @@ export default function EditProfile() {
               <AlertCircle className="w-8 h-8 text-white" />
             </div>
             <div className="flex-1">
-              <p className="font-bold text-red-900 text-lg">
-                Oops, algo salió mal
-              </p>
+              <p className="font-bold text-red-900 text-lg">Oops, algo salió mal</p>
               <p className="text-red-700">{error}</p>
             </div>
           </motion.div>
@@ -440,15 +423,13 @@ export default function EditProfile() {
             <motion.button
               whileHover={{ x: -5 }}
               whileTap={{ scale: 0.95 }}
-              onClick={() => router.push("/client/profile")}
+              onClick={() => router.push('/client/profile')}
               className="relative z-10 flex items-center gap-2 text-white hover:text-white/90 mb-4 bg-white/20 backdrop-blur-sm px-4 py-2 rounded-xl transition-all"
             >
               <ArrowLeft className="w-5 h-5" />
               <span className="font-semibold">Volver</span>
             </motion.button>
-            <h1 className="relative z-10 text-5xl font-bold text-white mb-2">
-              Editar Perfil
-            </h1>
+            <h1 className="relative z-10 text-5xl font-bold text-white mb-2">Editar Perfil</h1>
             <p className="relative z-10 text-white/90 text-lg">
               Mantén tu información actualizada y completa
             </p>
@@ -535,12 +516,10 @@ export default function EditProfile() {
 
               <div className="text-center max-w-md">
                 <p className="text-sm text-gray-600 mb-2">
-                  <strong>Click en el ícono de cámara</strong> para seleccionar
-                  una imagen desde tu PC
+                  <strong>Click en el ícono de cámara</strong> para seleccionar una imagen desde tu
+                  PC
                 </p>
-                <p className="text-xs text-gray-500">
-                  Formatos: JPG, PNG, WEBP, GIF • Máximo: 5MB
-                </p>
+                <p className="text-xs text-gray-500">Formatos: JPG, PNG, WEBP, GIF • Máximo: 5MB</p>
               </div>
             </motion.div>
 
@@ -554,9 +533,7 @@ export default function EditProfile() {
                 <div className="p-3 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-xl shadow-lg">
                   <User className="w-6 h-6 text-white" />
                 </div>
-                <h3 className="text-2xl font-bold text-gray-900">
-                  Información Personal
-                </h3>
+                <h3 className="text-2xl font-bold text-gray-900">Información Personal</h3>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -606,9 +583,7 @@ export default function EditProfile() {
                       className="w-full px-5 py-4 border-2 border-gray-200 rounded-2xl bg-gray-100/80 text-gray-500 cursor-not-allowed backdrop-blur-sm"
                     />
                     <div className="absolute right-4 top-1/2 -translate-y-1/2 bg-gray-200 px-3 py-1 rounded-full">
-                      <span className="text-xs font-semibold text-gray-600">
-                        No editable
-                      </span>
+                      <span className="text-xs font-semibold text-gray-600">No editable</span>
                     </div>
                   </div>
                 </div>
@@ -676,11 +651,7 @@ export default function EditProfile() {
 
                   <button
                     type="button"
-                    onClick={() =>
-                      alert(
-                        "Próximamente podrás fijar tu ubicación con Google Maps"
-                      )
-                    }
+                    onClick={() => alert('Próximamente podrás fijar tu ubicación con Google Maps')}
                     className="mt-3 px-4 py-2 bg-cyan-700 text-white rounded-xl hover:bg-cyan-800 transition w-fit text-sm font-semibold"
                   >
                     Configurar ubicación con mapa
@@ -734,9 +705,7 @@ export default function EditProfile() {
 
                 {/* Ciudad */}
                 <div>
-                  <label className="text-sm font-bold text-gray-700 mb-3 block">
-                    Ciudad
-                  </label>
+                  <label className="text-sm font-bold text-gray-700 mb-3 block">Ciudad</label>
                   <input
                     type="text"
                     name="city"
@@ -749,9 +718,7 @@ export default function EditProfile() {
 
                 {/* Estado */}
                 <div>
-                  <label className="text-sm font-bold text-gray-700 mb-3 block">
-                    Estado
-                  </label>
+                  <label className="text-sm font-bold text-gray-700 mb-3 block">Estado</label>
                   <input
                     type="text"
                     name="state"
@@ -806,7 +773,7 @@ export default function EditProfile() {
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 type="button"
-                onClick={() => router.push("/client/profile")}
+                onClick={() => router.push('/client/profile')}
                 className="flex-1 px-8 py-4 border-2 border-gray-300 text-gray-700 rounded-2xl hover:bg-gray-50 hover:border-gray-400 transition-all font-bold text-lg shadow-md"
               >
                 Cancelar
@@ -815,7 +782,7 @@ export default function EditProfile() {
               <motion.button
                 whileHover={{
                   scale: 1.02,
-                  boxShadow: "0 20px 40px rgba(37, 99, 235, 0.3)",
+                  boxShadow: '0 20px 40px rgba(37, 99, 235, 0.3)',
                 }}
                 whileTap={{ scale: 0.98 }}
                 type="submit"
@@ -866,11 +833,9 @@ export default function EditProfile() {
                   <div className="flex items-start gap-3 mb-4">
                     <AlertCircle className="w-6 h-6 text-red-600 flex-shrink-0 mt-1" />
                     <div>
-                      <h3 className="text-lg font-bold text-red-900 mb-1">
-                        Zona de Peligro
-                      </h3>
+                      <h3 className="text-lg font-bold text-red-900 mb-1">Zona de Peligro</h3>
                       <p className="text-sm text-red-700">
-                        Esta acción es <strong>permanente</strong> y{" "}
+                        Esta acción es <strong>permanente</strong> y{' '}
                         <strong>no se puede deshacer</strong>.
                       </p>
                     </div>
@@ -911,8 +876,7 @@ export default function EditProfile() {
                   ¿Estás completamente seguro?
                 </h2>
                 <p className="text-gray-600 mb-4">
-                  Esta acción eliminará permanentemente tu cuenta y todos tus
-                  datos.
+                  Esta acción eliminará permanentemente tu cuenta y todos tus datos.
                   <strong className="block mt-2 text-red-600">
                     Esta acción NO se puede deshacer.
                   </strong>
@@ -921,8 +885,7 @@ export default function EditProfile() {
 
               <div className="mb-6">
                 <label className="block text-sm font-bold text-gray-700 mb-2">
-                  Escribe <span className="text-red-600">ELIMINAR</span> para
-                  confirmar:
+                  Escribe <span className="text-red-600">ELIMINAR</span> para confirmar:
                 </label>
                 <input
                   type="text"
@@ -937,7 +900,7 @@ export default function EditProfile() {
                 <button
                   onClick={() => {
                     setShowDeleteConfirm(false);
-                    setDeleteInput("");
+                    setDeleteInput('');
                   }}
                   className="flex-1 px-6 py-3 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-colors font-semibold"
                 >
@@ -945,7 +908,7 @@ export default function EditProfile() {
                 </button>
                 <button
                   onClick={handleDeleteAccount}
-                  disabled={deleteInput !== "ELIMINAR" || deleting}
+                  disabled={deleteInput !== 'ELIMINAR' || deleting}
                   className="flex-1 px-6 py-3 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {deleting ? (
@@ -954,7 +917,7 @@ export default function EditProfile() {
                       Eliminando...
                     </>
                   ) : (
-                    "Eliminar mi cuenta"
+                    'Eliminar mi cuenta'
                   )}
                 </button>
               </div>
