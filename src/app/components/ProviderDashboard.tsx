@@ -102,7 +102,7 @@ export default function ProviderDashboard() {
     setError(null);
 
     try {
-      const backendUrl = 'http://localhost:3000';
+      const backendUrl = process.env.VITE_BACKEND_URL;
 
       console.log('📡 Fetching provider data for:', user.id);
 
