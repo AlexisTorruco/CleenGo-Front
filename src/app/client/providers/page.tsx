@@ -1,3 +1,4 @@
+//src/app/client/providers/page.tsx
 "use client";
 
 import { useState, useEffect } from "react";
@@ -8,14 +9,15 @@ import { useAuth } from "../../contexts/AuthContext";
 
 // 🔹 AJUSTADO PARA COINCIDIR CON EL BACK (Swagger)
 interface Provider {
-  id: string; // viene como uuid en el back
+  id: string;
   name: string;
   surname?: string;
+  email?: string;
   rating: number;
-  profileImgUrl?: string | null; // <- campo real del back
-  services?: string[];           // opcional por si lo agregan después
-  days: string[];                // "days" en swagger
-  hours: string[];               // "hours" en swagger
+  profileImgUrl?: string | null;
+  services?: string[];
+  days: string[];
+  hours: string[];
   about?: string;
   isActive?: boolean;
 }
@@ -46,19 +48,37 @@ export default function ProvidersPage() {
   const loadAllProviders = async () => {
     if (!backendUrl) {
       console.error("❌ VITE_BACKEND_URL no está definido");
+      Swal.fire({
+        icon: "error",
+        title: "Error de configuración",
+        text: "VITE_BACKEND_URL no está definido en el frontend.",
+        confirmButtonColor: "#22C55E",
+      });
       return;
     }
 
     setLoading(true);
     try {
-      const response = await fetch(`${backendUrl}provider`);
-      if (!response.ok) throw new Error("Error al cargar proveedores");
+      console.log("➡️ Cargando proveedores desde:", `${backendUrl}/provider`);
+
+      const response = await fetch(`${backendUrl}/provider`);
+
+      if (!response.ok) {
+        console.error(
+          "❌ Error al cargar proveedores:",
+          response.status,
+          response.statusText
+        );
+        throw new Error(`Error al cargar proveedores: ${response.status}`);
+      }
 
       const data: Provider[] = await response.json();
+      console.log("✅ Proveedores obtenidos:", data);
+
       setProviders(data);
       setInitialLoad(false);
     } catch (err) {
-      console.error(err);
+      console.error("❌ Excepción al cargar proveedores:", err);
       Swal.fire({
         icon: "error",
         title: "Error",
@@ -72,7 +92,10 @@ export default function ProvidersPage() {
 
   // Buscar con filtros (los reales del back)
   const handleSearch = async (filters: FilterData) => {
-    if (!backendUrl) return;
+    if (!backendUrl) {
+      console.error("❌ VITE_BACKEND_URL no está definido");
+      return;
+    }
 
     setLoading(true);
     try {
@@ -85,15 +108,23 @@ export default function ProvidersPage() {
       if (filters.rating > 0)
         params.append("rating", filters.rating.toString());
 
-      const response = await fetch(
-        `${backendUrl}provider/filter?${params.toString()}`
-      );
+      const url = `${backendUrl}/provider/filter?${params.toString()}`;
+      console.log("➡️ Buscando proveedores con filtros en:", url);
+
+      const response = await fetch(url);
 
       if (!response.ok) {
+        console.error(
+          "❌ Error al buscar proveedores:",
+          response.status,
+          response.statusText
+        );
         throw new Error("Error al buscar proveedores");
       }
 
       const data: Provider[] = await response.json();
+      console.log("✅ Proveedores filtrados:", data);
+
       setProviders(data);
 
       if (data.length > 0) {
@@ -115,7 +146,7 @@ export default function ProvidersPage() {
         });
       }
     } catch (err) {
-      console.error(err);
+      console.error("❌ Excepción al buscar proveedores:", err);
       Swal.fire({
         icon: "error",
         title: "Error",
@@ -133,23 +164,39 @@ export default function ProvidersPage() {
   };
 
   // Agendar cita
-  const handleBookAppointment = (providerId: string, providerName: string) => {
-  if (!user) {
-    Swal.fire({
-      icon: "warning",
-      title: "Inicia sesión",
-      text: "Debes iniciar sesión para agendar una cita",
-      showCancelButton: true,
-      confirmButtonText: "Iniciar sesión",
-      cancelButtonText: "Cancelar",
-      confirmButtonColor: "#22C55E",
-      cancelButtonColor: "#6B7280",
-    }).then((result) => {
-      if (result.isConfirmed) {
-        router.push("/login");
-      }
-    });
-  } else {
+  const handleBookAppointment = (
+    providerId: string,
+    providerName: string,
+    providerEmail?: string
+  ) => {
+    if (!user) {
+      Swal.fire({
+        icon: "warning",
+        title: "Inicia sesión",
+        text: "Debes iniciar sesión para agendar una cita",
+        showCancelButton: true,
+        confirmButtonText: "Iniciar sesión",
+        cancelButtonText: "Cancelar",
+        confirmButtonColor: "#22C55E",
+        cancelButtonColor: "#6B7280",
+      }).then((result) => {
+        if (result.isConfirmed) router.push("/login");
+      });
+      return;
+    }
+
+    if (!providerEmail) {
+      Swal.fire({
+        icon: "error",
+        title: "Falta email del proveedor",
+        text:
+          "El backend requiere providerEmail para crear la cita. " +
+          "Necesitamos que el endpoint /provider lo incluya o crear un endpoint para obtenerlo por id.",
+        confirmButtonColor: "#22C55E",
+      });
+      return;
+    }
+
     Swal.fire({
       icon: "question",
       title: `¿Agendar cita con ${providerName}?`,
@@ -161,17 +208,14 @@ export default function ProvidersPage() {
       cancelButtonColor: "#6B7280",
     }).then((result) => {
       if (result.isConfirmed) {
-        // 👇 AQUÍ ES DONDE CAMBIA
         router.push(
-          `/client/appointments/create?providerId=${providerId}&providerName=${encodeURIComponent(
-            providerName
-          )}`
+          `/client/appointments/create?providerId=${providerId}` +
+            `&providerName=${encodeURIComponent(providerName)}` +
+            `&providerEmail=${encodeURIComponent(providerEmail)}`
         );
       }
     });
-  }
-};
-
+  };
 
   // Solo usamos user para layout cuando ya estamos en el cliente
   const showFilters = isClient && !!user;
@@ -194,9 +238,7 @@ export default function ProvidersPage() {
           <div className="lg:hidden mb-4">
             <button
               type="button"
-              onClick={() =>
-                setIsMobileFiltersOpen((open) => !open)
-              }
+              onClick={() => setIsMobileFiltersOpen((open) => !open)}
               className="w-full flex items-center justify-between px-4 py-3 rounded-xl bg-white/90 text-gray-800 shadow-md text-sm font-semibold"
             >
               <span>Filtros avanzados</span>
@@ -302,7 +344,7 @@ export default function ProvidersPage() {
                       ? provider.profileImgUrl.startsWith("http")
                         ? provider.profileImgUrl
                         : backendUrl
-                        ? `${backendUrl}uploads/${provider.profileImgUrl}`
+                        ? `${backendUrl}/uploads/${provider.profileImgUrl}`
                         : provider.profileImgUrl
                       : null;
 
@@ -360,11 +402,12 @@ export default function ProvidersPage() {
                               </div>
 
                               {/* Servicios / tags (simulados por ahora) */}
-                              {provider.services && provider.services.length > 0 && (
-                                <p className="text-xs text-[#0A65FF] font-medium mb-1 truncate">
-                                  {provider.services.join(" · ")}
-                                </p>
-                              )}
+                              {provider.services &&
+                                provider.services.length > 0 && (
+                                  <p className="text-xs text-[#0A65FF] font-medium mb-1 truncate">
+                                    {provider.services.join(" · ")}
+                                  </p>
+                                )}
 
                               {/* Descripción */}
                               <p className="text-sm text-gray-600 line-clamp-2">
@@ -427,7 +470,11 @@ export default function ProvidersPage() {
                           {/* CTA */}
                           <button
                             onClick={() =>
-                              handleBookAppointment(provider.id.toString(), provider.name)
+                              handleBookAppointment(
+                                provider.id.toString(),
+                                provider.name,
+                                provider.email
+                              )
                             }
                             className="w-full bg-[#22C55E] text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-[#16A34A] transition-colors mt-1"
                           >
