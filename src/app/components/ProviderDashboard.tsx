@@ -1,18 +1,10 @@
 // src/app/components/ProviderDashboard.tsx
 "use client";
 
-<<<<<<< HEAD
-import { useCallback, useEffect, useState } from 'react';
-import { useAuth } from '../contexts/AuthContext';
-import { useRouter } from 'next/navigation';
-import { motion } from 'framer-motion';
-import PremiumBadge from '../components/PremiumBadge';
-=======
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
->>>>>>> 8811c49990b64e7e8abeeae42f5bd7f2f9d8d7d1
 import {
   Calendar,
   DollarSign,
@@ -35,15 +27,9 @@ import {
   ShoppingCart,
   MessageCircle,
   FileText,
-<<<<<<< HEAD
-  Crown,
-} from 'lucide-react';
-import { calculateProfileCompleteness } from '../services/providerService';
-=======
 } from "lucide-react";
 
 import { calculateProfileCompleteness } from "../services/providerService";
->>>>>>> 8811c49990b64e7e8abeeae42f5bd7f2f9d8d7d1
 
 // ============================================
 // TIPOS (alineados a tu JSON REAL)
@@ -116,21 +102,6 @@ interface DashboardStats {
   pendingRequests: number;
 }
 
-<<<<<<< HEAD
-interface Subscription {
-  id: string;
-  providerId: string;
-  planId: string;
-  paymentStatus: boolean;
-  isActive: boolean;
-  startDate: string;
-  endDate?: string;
-}
-
-// ============================================
-// COMPONENTE
-// ============================================
-=======
 type TabKey = "requests" | "jobs" | "purchases";
 
 // ✅ para contar no leídos por cita
@@ -140,7 +111,6 @@ type ChatMessageLite = {
   receiver?: { id: string };
 };
 
->>>>>>> 8811c49990b64e7e8abeeae42f5bd7f2f9d8d7d1
 export default function ProviderDashboard() {
   const { user, token, logout } = useAuth();
   const router = useRouter();
@@ -163,13 +133,7 @@ export default function ProviderDashboard() {
   );
 
   const [processingId, setProcessingId] = useState<string | null>(null);
-<<<<<<< HEAD
-  const [profileCompleteness, setProfileCompleteness] = useState(0);
-  const [isPremium, setIsPremium] = useState(false);
-  const [checkingPremium, setCheckingPremium] = useState(true);
-=======
   const [activeTab, setActiveTab] = useState<TabKey>("jobs");
->>>>>>> 8811c49990b64e7e8abeeae42f5bd7f2f9d8d7d1
 
   // ✅ feature extra: completitud perfil (de tu compa)
   const [profileCompleteness, setProfileCompleteness] = useState(100);
@@ -179,7 +143,7 @@ export default function ProviderDashboard() {
     Record<string, number>
   >({});
 
-  const normalizeStatus = (s: any) => String(s ?? "").toLowerCase();
+  const normalizeStatus = (s: unknown) => String(s ?? "").toLowerCase();
 
   const statusConfig = {
     pending: {
@@ -263,16 +227,7 @@ export default function ProviderDashboard() {
           router.push("/login");
           return;
         }
-<<<<<<< HEAD
-        console.error('Profile fetch failed:', {
-          status: profileRes.status,
-          statusText: profileRes.statusText,
-          url: `${backendUrl}/provider/${user.id}`,
-        });
-        throw new Error(`Error al cargar el perfil (${profileRes.status}: ${profileRes.statusText})`);
-=======
         throw new Error("Error al cargar el perfil");
->>>>>>> 8811c49990b64e7e8abeeae42f5bd7f2f9d8d7d1
       }
 
       const profileData = await profileRes.json();
@@ -288,32 +243,7 @@ export default function ProviderDashboard() {
         setProfileCompleteness(100);
       }
 
-<<<<<<< HEAD
-      // Fetch subscription status
-      const subscriptionRes = await fetch(`${backendUrl}/subscriptions/provider/${user.id}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        cache: 'no-store',
-      });
-
-      if (subscriptionRes.ok) {
-        const subscriptionData = await subscriptionRes.json();
-        const hasActivePremium = Array.isArray(subscriptionData)
-          ? subscriptionData.some((sub: Subscription) => sub.isActive && sub.paymentStatus)
-          : (subscriptionData?.isActive && subscriptionData?.paymentStatus);
-        setIsPremium(hasActivePremium);
-        console.log('🌟 Premium status:', hasActivePremium);
-      } else {
-        setIsPremium(false);
-      }
-      setCheckingPremium(false);
-
-      // Fetch appointments
-=======
       // Appointments del usuario autenticado
->>>>>>> 8811c49990b64e7e8abeeae42f5bd7f2f9d8d7d1
       const appointmentsRes = await fetch(`${backendUrl}/appointments`, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -328,44 +258,7 @@ export default function ProviderDashboard() {
           router.push("/login");
           return;
         }
-<<<<<<< HEAD
-
-        const providerAppointments = allAppointments.filter((apt) => apt.providerId === user.id);
-        console.log('📅 Provider appointments:', providerAppointments.length);
-
-        const pending = providerAppointments.filter((apt) => apt.status === 'pending');
-        const nonPending = providerAppointments.filter((apt) => apt.status !== 'pending');
-
-        setPendingAppointments(pending);
-        setAppointments(nonPending);
-
-        const completed = providerAppointments.filter((apt) => apt.status === 'completed').length;
-        const upcoming = providerAppointments.filter(
-          (apt) => apt.status === 'scheduled' || apt.status === 'in-progress'
-        ).length;
-        const totalEarned = providerAppointments
-          .filter((apt) => apt.status === 'completed')
-          .reduce((sum, apt) => sum + (apt.cost || 0), 0);
-
-        const ratedAppointments = providerAppointments.filter(
-          (apt) => apt.rating && apt.status === 'completed'
-        );
-        const averageRating =
-          ratedAppointments.length > 0
-            ? ratedAppointments.reduce((sum, apt) => sum + (apt.rating || 0), 0) /
-              ratedAppointments.length
-            : 0;
-
-        setStats({
-          completedServices: completed,
-          upcomingServices: upcoming,
-          totalEarned,
-          averageRating: Math.round(averageRating * 10) / 10,
-          pendingRequests: pending.length,
-        });
-=======
         throw new Error("Error al cargar citas");
->>>>>>> 8811c49990b64e7e8abeeae42f5bd7f2f9d8d7d1
       }
 
       const data: AppointmentsResponse = await appointmentsRes.json();
@@ -497,23 +390,8 @@ export default function ProviderDashboard() {
         throw new Error(txt || "Error al actualizar la cita");
       }
 
-<<<<<<< HEAD
-      console.log(`✅ Appointment ${action}ed:`, appointmentId);
-
-      await fetchData();
-
-      const successMsg = document.createElement('div');
-      successMsg.className =
-        'fixed top-4 right-4 bg-emerald-500 text-white px-6 py-3 rounded-xl shadow-lg z-50 flex items-center gap-2';
-      successMsg.innerHTML = `<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg> <span>Solicitud ${
-        action === 'accept' ? 'aceptada' : 'rechazada'
-      }</span>`;
-      document.body.appendChild(successMsg);
-      setTimeout(() => successMsg.remove(), 3000);
-=======
       await fetchData();
       await refreshUnreadByAppointment();
->>>>>>> 8811c49990b64e7e8abeeae42f5bd7f2f9d8d7d1
     } catch (err) {
       console.error("❌ Error updating appointment:", err);
       setError(
@@ -524,23 +402,6 @@ export default function ProviderDashboard() {
     }
   };
 
-<<<<<<< HEAD
-  useEffect(() => {
-    if (!user || !token) {
-      router.push('/login');
-      return;
-    }
-
-    if (user.role !== 'provider') {
-      router.push('/dashboard');
-      return;
-    }
-
-    fetchData();
-
-    const handleFocus = () => {
-      fetchData();
-=======
   const handleAccept = (id: string) =>
     updateAppointmentStatus(id, "confirmedProvider");
   const handleReject = (id: string) => updateAppointmentStatus(id, "rejected");
@@ -570,7 +431,6 @@ export default function ProviderDashboard() {
       upcomingServices,
       totalEarned,
       averageRating,
->>>>>>> 8811c49990b64e7e8abeeae42f5bd7f2f9d8d7d1
     };
   }, [providerAppointments]);
 
@@ -715,10 +575,6 @@ export default function ProviderDashboard() {
 
           <div className="p-8">
             <div className="flex flex-col md:flex-row items-center gap-6">
-<<<<<<< HEAD
-              {/* Profile Image */}
-=======
->>>>>>> 8811c49990b64e7e8abeeae42f5bd7f2f9d8d7d1
               <div className="relative group">
                 <div className="absolute -inset-1 bg-gradient-to-r from-blue-500 via-cyan-500 to-emerald-500 rounded-full blur opacity-40 group-hover:opacity-75 transition-opacity"></div>
                 {profile?.profileImgUrl ? (
@@ -770,10 +626,6 @@ export default function ProviderDashboard() {
                 )}
               </div>
 
-<<<<<<< HEAD
-              {/* Rating Badge & Buttons */}
-=======
->>>>>>> 8811c49990b64e7e8abeeae42f5bd7f2f9d8d7d1
               <div className="flex flex-col gap-3">
                 <div className="bg-gradient-to-br from-blue-500 via-cyan-500 to-emerald-500 rounded-2xl p-6 text-white text-center shadow-xl">
                   <Award className="w-8 h-8 mx-auto mb-2" />
@@ -998,63 +850,7 @@ export default function ProviderDashboard() {
           </div>
         </motion.div>
 
-<<<<<<< HEAD
-        {/* Banner para usuarios gratuitos */}
-        {!isPremium && !checkingPremium && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="relative z-10 bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-orange-200 rounded-2xl p-6 mb-8"
-          >
-            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-              <div className="flex-1">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="p-2 bg-orange-200 rounded-lg">
-                    <AlertCircle className="w-5 h-5 text-orange-700" />
-                  </div>
-                  <h3 className="text-xl font-bold text-orange-900">
-                    Estás usando la versión Gratuita
-                  </h3>
-                </div>
-                <p className="text-orange-800 mb-3">
-                  Tu cuenta tiene limitaciones. Actualiza a Premium para desbloquear:
-                </p>
-                <ul className="space-y-2">
-                  <li className="flex items-center gap-2 text-orange-700">
-                    <Check className="w-4 h-4" />
-                    <span>Clientes ilimitados (actualmente: máx. 3)</span>
-                  </li>
-                  <li className="flex items-center gap-2 text-orange-700">
-                    <Check className="w-4 h-4" />
-                    <span>Aparecer destacado en búsquedas</span>
-                  </li>
-                  <li className="flex items-center gap-2 text-orange-700">
-                    <Check className="w-4 h-4" />
-                    <span>Badge Premium visible</span>
-                  </li>
-                  <li className="flex items-center gap-2 text-orange-700">
-                    <Check className="w-4 h-4" />
-                    <span>Mayor visibilidad y alcance</span>
-                  </li>
-                </ul>
-              </div>
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => router.push('/subscriptions')}
-                className="bg-gradient-to-r from-orange-500 to-amber-600 text-white px-8 py-4 rounded-xl font-bold shadow-lg hover:shadow-xl transition-all flex items-center gap-2 whitespace-nowrap"
-              >
-                <Crown className="w-5 h-5" />
-                Hazte Premium
-              </motion.button>
-            </div>
-          </motion.div>
-        )}
-
-        {/* Stats Grid */}
-=======
         {/* Stats */}
->>>>>>> 8811c49990b64e7e8abeeae42f5bd7f2f9d8d7d1
         <div className="relative z-10 grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <StatCard
             title="Solicitudes Pendientes"

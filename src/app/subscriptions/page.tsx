@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '../contexts/AuthContext';
 import { motion } from 'framer-motion';
@@ -21,7 +21,7 @@ interface Subscription {
   updatedAt: string;
 }
 
-export default function SubscriptionSuccessPage() {
+function SubscriptionSuccessContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { token, user } = useAuth();
@@ -260,5 +260,23 @@ export default function SubscriptionSuccessPage() {
         )}
       </motion.div>
     </div>
+  );
+}
+
+export default function SubscriptionSuccessPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 via-cyan-50 to-emerald-50 flex items-center justify-center px-4 pt-24">
+          <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl p-8 max-w-md w-full text-center">
+            <Loader2 className="w-16 h-16 text-blue-600 animate-spin mx-auto mb-4" />
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">Cargando...</h1>
+            <p className="text-gray-600">Preparando la verificación de tu suscripción</p>
+          </div>
+        </div>
+      }
+    >
+      <SubscriptionSuccessContent />
+    </Suspense>
   );
 }
