@@ -91,6 +91,7 @@ interface UserProfile {
   about?: string;
   days?: string[];
   hours?: string[];
+  address?: string;
 }
 
 interface DashboardStats {
@@ -142,7 +143,7 @@ export default function ProviderDashboard() {
     Record<string, number>
   >({});
 
-  const normalizeStatus = (s: any) => String(s ?? "").toLowerCase();
+  const normalizeStatus = (s: unknown) => String(s ?? "").toLowerCase();
 
   const statusConfig = {
     pending: {
@@ -801,6 +802,45 @@ export default function ProviderDashboard() {
                         <p className="text-gray-600 mt-1">
                           {profile.fullAddress}
                         </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Address Section */}
+            {profile?.address && (
+              <div className="mt-6 pt-6 border-t border-gray-200">
+                <div className="flex items-start gap-3 text-gray-600 text-sm bg-purple-50/50 rounded-xl p-4 border border-purple-100">
+                  <MapPin className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
+                  <div className="flex flex-col gap-2 text-left">
+                    <div>
+                      <span className="font-semibold text-gray-700">Dirección: </span>
+                      <span>{profile.address}</span>
+                    </div>
+                    {profile.city && (
+                      <div>
+                        <span className="font-semibold text-gray-700">Ciudad: </span>
+                        <span>{profile.city}</span>
+                      </div>
+                    )}
+                    {profile.state && (
+                      <div>
+                        <span className="font-semibold text-gray-700">Estado: </span>
+                        <span>{profile.state}</span>
+                      </div>
+                    )}
+                    {profile.country && (
+                      <div>
+                        <span className="font-semibold text-gray-700">País: </span>
+                        <span>{profile.country}</span>
+                      </div>
+                    )}
+                    {profile.postalCode && (
+                      <div>
+                        <span className="font-semibold text-gray-700">Código Postal: </span>
+                        <span>{profile.postalCode}</span>
                       </div>
                     )}
                   </div>
