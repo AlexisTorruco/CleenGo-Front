@@ -1,5 +1,5 @@
 'use client';
-
+//importaciones
 import React, { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/app/contexts/AuthContext';
@@ -30,7 +30,7 @@ const Dashboard = () => {
     );
   }
 
-  // Renderizar el dashboard según el rol del usuario
+  // Renderizar el dashboard según el rol del usuario ...
   if (user.role === 'client') {
     return <ClientDashboard />;
   }
