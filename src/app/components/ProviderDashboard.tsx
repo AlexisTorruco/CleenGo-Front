@@ -212,7 +212,11 @@ export default function ProviderDashboard() {
     setError(null);
 
     try {
-      // Profile provider
+      const backendUrl = process.env.VITE_BACKEND_URL;
+
+      console.log('📡 Fetching provider data for:', user.id);
+
+      // Fetch provider profile
       const profileRes = await fetch(`${backendUrl}/provider/${user.id}`, {
         headers: {
           Authorization: `Bearer ${token}`,
