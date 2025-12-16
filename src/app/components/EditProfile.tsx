@@ -100,7 +100,7 @@ export default function EditProfile() {
     setError(null);
 
     try {
-      const backendUrl = 'http://localhost:3000';
+      const backendUrl = process.env.VITE_BACKEND_URL;
       const response = await fetch(`${backendUrl}/user/profile/${user.id}`, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -184,7 +184,7 @@ export default function EditProfile() {
     setError(null);
 
     try {
-      const backendUrl = 'VITE_BACKEND_URL';
+      const backendUrl = process.env.VITE_BACKEND_URL;
       const fd = new FormData();
       fd.append('file', selectedFile);
 
@@ -236,7 +236,7 @@ export default function EditProfile() {
     setSuccess(false);
 
     try {
-      const backendUrl = 'VITE_BACKEND_URL';
+      const backendUrl = process.env.VITE_BACKEND_URL;
 
       // 👉 Armamos la línea base de dirección con los campos desglosados
       const addressParts: string[] = [];
@@ -330,7 +330,7 @@ export default function EditProfile() {
     setError(null);
 
     try {
-      const backendUrl = 'VITE_BACKEND_URL';
+      const backendUrl = process.env.VITE_BACKEND_URL;
       const response = await fetch(`${backendUrl}/user/delete-profile/${user.id}`, {
         method: 'DELETE',
         headers: {
