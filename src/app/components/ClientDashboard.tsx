@@ -78,9 +78,7 @@ export default function ClientDashboard() {
   const router = useRouter();
   const { user, token } = useAuth();
 
-  const backendUrl =
-    process.env.NEXT_PUBLIC_BACKEND_URL ||
-    process.env.VITE_BACKEND_URL;
+  const backendUrl = process.env.VITE_BACKEND_URL;
 
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);

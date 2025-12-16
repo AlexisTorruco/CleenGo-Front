@@ -115,9 +115,7 @@ export default function ProviderDashboard() {
   const { user, token, logout } = useAuth();
   const router = useRouter();
 
-  const backendUrl =
-    process.env.NEXT_PUBLIC_BACKEND_URL ||
-    process.env.VITE_BACKEND_URL;
+  const backendUrl = process.env.VITE_BACKEND_URL;
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -213,7 +211,7 @@ export default function ProviderDashboard() {
     try {
       const backendUrl = process.env.VITE_BACKEND_URL;
 
-      console.log('📡 Fetching provider data for:', user.id);
+      console.log("📡 Fetching provider data for:", user.id);
 
       // Fetch provider profile
       const profileRes = await fetch(`${backendUrl}/provider/${user.id}`, {
@@ -819,30 +817,40 @@ export default function ProviderDashboard() {
                   <MapPin className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
                   <div className="flex flex-col gap-2 text-left">
                     <div>
-                      <span className="font-semibold text-gray-700">Dirección: </span>
+                      <span className="font-semibold text-gray-700">
+                        Dirección:{" "}
+                      </span>
                       <span>{profile.address}</span>
                     </div>
                     {profile.city && (
                       <div>
-                        <span className="font-semibold text-gray-700">Ciudad: </span>
+                        <span className="font-semibold text-gray-700">
+                          Ciudad:{" "}
+                        </span>
                         <span>{profile.city}</span>
                       </div>
                     )}
                     {profile.state && (
                       <div>
-                        <span className="font-semibold text-gray-700">Estado: </span>
+                        <span className="font-semibold text-gray-700">
+                          Estado:{" "}
+                        </span>
                         <span>{profile.state}</span>
                       </div>
                     )}
                     {profile.country && (
                       <div>
-                        <span className="font-semibold text-gray-700">País: </span>
+                        <span className="font-semibold text-gray-700">
+                          País:{" "}
+                        </span>
                         <span>{profile.country}</span>
                       </div>
                     )}
                     {profile.postalCode && (
                       <div>
-                        <span className="font-semibold text-gray-700">Código Postal: </span>
+                        <span className="font-semibold text-gray-700">
+                          Código Postal:{" "}
+                        </span>
                         <span>{profile.postalCode}</span>
                       </div>
                     )}
