@@ -69,7 +69,7 @@ function SubscriptionSuccessContent() {
     if (!user?.id || !token) return;
 
     try {
-      const backendUrl = 'http://localhost:3000';
+      const backendUrl = process.env.VITE_BACKEND_URL;
 
       setAttempts((prev) => {
         const newAttempts = prev + 1;
