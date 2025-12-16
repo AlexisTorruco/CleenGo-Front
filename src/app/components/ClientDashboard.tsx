@@ -80,8 +80,7 @@ export default function ClientDashboard() {
 
   const backendUrl =
     process.env.NEXT_PUBLIC_BACKEND_URL ||
-    process.env.VITE_BACKEND_URL ||
-    "http://localhost:3000";
+    process.env.VITE_BACKEND_URL;
 
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);

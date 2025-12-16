@@ -31,8 +31,8 @@ export default function ChatPageClient() {
 
   const backendUrl =
     process.env.NEXT_PUBLIC_BACKEND_URL ||
-    process.env.VITE_BACKEND_URL ||
-    "http://localhost:3000";
+    process.env.VITE_BACKEND_URL;
+
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(true);
@@ -81,7 +81,7 @@ export default function ChatPageClient() {
     await fetch(`${backendUrl}/chat/appointments/${appointmentId}/read`, {
       method: "PATCH",
       headers: authHeaders,
-    }).catch(() => {});
+    }).catch(() => { });
   }, [appointmentId, authHeaders, backendUrl, token]);
 
   const markReadIfNeeded = useCallback(
@@ -325,8 +325,8 @@ export default function ChatPageClient() {
                 ? isTemp
                   ? "text-gray-400"
                   : m.read
-                  ? "text-blue-600 font-semibold"
-                  : "text-gray-400"
+                    ? "text-blue-600 font-semibold"
+                    : "text-gray-400"
                 : "";
 
               return (
@@ -335,11 +335,10 @@ export default function ChatPageClient() {
                   className={`flex ${mine ? "justify-end" : "justify-start"}`}
                 >
                   <div
-                    className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm shadow-sm ${
-                      mine
+                    className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm shadow-sm ${mine
                         ? "bg-[#22C55E]/15 text-gray-900"
                         : "bg-gray-100 text-gray-900"
-                    }`}
+                      }`}
                   >
                     <p className="whitespace-pre-wrap">{m.content}</p>
 
@@ -355,8 +354,8 @@ export default function ChatPageClient() {
                             isTemp
                               ? "Enviando..."
                               : m.read
-                              ? "Leído"
-                              : "Enviado"
+                                ? "Leído"
+                                : "Enviado"
                           }
                         >
                           {checksText}
@@ -387,11 +386,10 @@ export default function ChatPageClient() {
           <button
             onClick={send}
             disabled={sending}
-            className={`rounded-xl px-4 py-2 text-sm font-semibold text-white ${
-              sending
+            className={`rounded-xl px-4 py-2 text-sm font-semibold text-white ${sending
                 ? "bg-[#22C55E]/60 cursor-not-allowed"
                 : "bg-[#22C55E] hover:bg-[#16A34A]"
-            }`}
+              }`}
           >
             {sending ? "Enviando..." : "Enviar"}
           </button>

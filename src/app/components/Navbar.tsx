@@ -51,8 +51,7 @@ export default function Navbar() {
 
   const backendUrl =
     process.env.NEXT_PUBLIC_BACKEND_URL ||
-    process.env.VITE_BACKEND_URL ||
-    "http://localhost:3000";
+    process.env.VITE_BACKEND_URL;
 
   // Marcamos cuando el componente ya se montó en el cliente
   useEffect(() => {

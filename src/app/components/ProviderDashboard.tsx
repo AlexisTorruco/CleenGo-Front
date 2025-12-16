@@ -117,8 +117,7 @@ export default function ProviderDashboard() {
 
   const backendUrl =
     process.env.NEXT_PUBLIC_BACKEND_URL ||
-    process.env.VITE_BACKEND_URL ||
-    "http://localhost:3000";
+    process.env.VITE_BACKEND_URL;
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
