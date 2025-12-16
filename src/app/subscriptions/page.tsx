@@ -1,94 +1,84 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState, useRef } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '../contexts/AuthContext';
-import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import {
-  Crown,
-  Check,
-  ArrowRight,
-  Shield,
-  Star,
-  Eye,
-  TrendingUp,
-  Users,
-  Target,
-  Sparkles,
-  Zap,
-  AlertCircle,
-  Loader2,
-  X,
-} from 'lucide-react';
+import { CheckCircle, Loader2, XCircle, ArrowRight, Clock, AlertTriangle } from 'lucide-react';
 
 // ============================================
 // INTERFACES
 // ============================================
-interface Plan {
-  id: string;
-  name: string;
-  price: number;
-  description: string;
-  isActive: boolean;
-}
-
 interface Subscription {
   id: string;
   providerId: string;
   planId: string;
+  paymentStatus: boolean;
+  isActive: boolean;
   startDate: string;
-  endDate: string;
-  status?: 'active' | 'cancelled' | 'expired';
-  isActive?: boolean;
+  endDate?: string;
   createdAt: string;
   updatedAt: string;
 }
 
-// ============================================
-// COMPONENTE
-// ============================================
-export default function SubscriptionPage() {
-  const { user, token } = useAuth();
+export default function SubscriptionSuccessPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const { token, user } = useAuth();
 
-  const [loading, setLoading] = useState(true);
-  const [processing, setProcessing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [plans, setPlans] = useState<Plan[]>([]);
-  const [userSubscription, setUserSubscription] = useState<Subscription | null>(null);
+  const [status, setStatus] = useState<'loading' | 'success' | 'error' | 'timeout'>('loading');
+  const [message, setMessage] = useState('Verificando tu suscripción...');
+  const [attempts, setAttempts] = useState(0);
+  const maxAttempts = 30;
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    if (!user || !token) {
+    const sessionId = searchParams.get('session_id');
+
+    if (!sessionId) {
+      console.warn(
+        '⚠️ No session_id found - backend needs to add ?session_id={CHECKOUT_SESSION_ID}'
+      );
+    } else {
+      console.log('✅ Session ID received:', sessionId);
+    }
+
+    if (!user?.id || !token) {
+      console.log('❌ No user or token, redirecting to login...');
       router.push('/login');
       return;
     }
 
-    fetchData();
-  }, [user, token, router]);
+    // Verificar inmediatamente
+    checkSubscription();
 
-  const fetchData = async () => {
+    // Polling cada 3 segundos
+    intervalRef.current = setInterval(() => {
+      checkSubscription();
+    }, 3000);
+
+    // Cleanup
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
+  }, [searchParams, token, user, router]);
+
+  const checkSubscription = async () => {
     if (!user?.id || !token) return;
 
-    setLoading(true);
     try {
       const backendUrl = 'http://localhost:3000';
 
-      // Fetch plans
-      const plansResponse = await fetch(`${backendUrl}/plan`, {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        cache: 'no-store',
+      setAttempts((prev) => {
+        const newAttempts = prev + 1;
+        console.log(`🔍 Attempt ${newAttempts}/${maxAttempts}: Checking subscriptions...`);
+        return newAttempts;
       });
 
-      if (plansResponse.ok) {
-        const plansData = await plansResponse.json();
-        console.log('📋 Plans loaded:', plansData);
-        setPlans(plansData);
-      }
-
-      // Fetch user subscriptions
-      const subsResponse = await fetch(`${backendUrl}/subscription`, {
+      // Obtener todas las suscripciones
+      const response = await fetch(`${backendUrl}/subscription`, {
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -96,481 +86,179 @@ export default function SubscriptionPage() {
         cache: 'no-store',
       });
 
-      if (subsResponse.ok) {
-        const subsData = await subsResponse.json();
-        console.log('📋 All subscriptions:', subsData);
-
-        // Find active subscription
-        const userSub = Array.isArray(subsData)
-          ? subsData.find(
-              (sub: Subscription) =>
-                sub.providerId === user.id && (sub.status === 'active' || sub.isActive === true)
-            )
-          : null;
-
-        if (userSub) {
-          console.log('✅ User active subscription:', userSub);
-          setUserSubscription(userSub);
-        } else {
-          console.log('ℹ️ No active subscription found');
-        }
-      }
-    } catch (err) {
-      console.error('❌ Error fetching data:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSubscribe = async (planId: string, planName: string, planPrice: number) => {
-    if (!user || !token) {
-      router.push('/login');
-      return;
-    }
-
-    // Check if user already has active subscription
-    if (userSubscription) {
-      setError('Ya tienes una suscripción activa. Cancélala primero para cambiar de plan.');
-      setTimeout(() => setError(null), 4000);
-      return;
-    }
-
-    setProcessing(true);
-    setError(null);
-
-    try {
-      const backendUrl = 'http://localhost:3000';
-
-      console.log('💳 Creating Stripe checkout session...');
-      console.log('🔍 User data:', {
-        userId: user.id,
-        planId,
-        token: token ? 'exists' : 'missing',
-      });
-
-      const checkoutData = {
-        providerId: user.id,
-        planId: planId,
-      };
-
-      console.log('📤 Sending to backend:', JSON.stringify(checkoutData, null, 2));
-
-      const response = await fetch(`${backendUrl}/subscription/create-checkout-session`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(checkoutData),
-      });
-
-      console.log('📥 Response status:', response.status, response.statusText);
-      console.log('📥 Response headers:', Object.fromEntries(response.headers.entries()));
-
-      // Intentar parsear la respuesta como JSON primero
-      let responseData;
-      const contentType = response.headers.get('content-type');
-
-      console.log('📋 Content-Type:', contentType);
-
-      try {
-        if (contentType && contentType.includes('application/json')) {
-          responseData = await response.json();
-          console.log('✅ Parsed as JSON:', responseData);
-        } else {
-          responseData = await response.text();
-          console.log('✅ Parsed as TEXT:', responseData);
-        }
-      } catch (parseError) {
-        console.error('❌ Error parsing response:', parseError);
-        throw new Error('Error al procesar la respuesta del servidor');
-      }
-
-      console.log('📦 Response data (final):', responseData);
-
       if (!response.ok) {
-        console.log('❌ Response is NOT OK');
-        console.log('❌ Status:', response.status);
-        console.log('❌ Status Text:', response.statusText);
-        console.log('❌ Data:', responseData);
-        console.log('❌ Type of data:', typeof responseData);
-
-        console.error('❌ Backend error details:', {
-          status: response.status,
-          statusText: response.statusText,
-          data: responseData,
-          headers: Object.fromEntries(response.headers.entries()),
-        });
-
-        // Intentar extraer mensaje de error específico
-        let errorMessage = 'Error al crear la sesión de pago con Stripe';
-
-        console.log('🔍 Extracting error message from:', responseData);
-
-        if (typeof responseData === 'object' && responseData !== null) {
-          console.log('📝 Is object, checking message field...');
-          const backendMessage = responseData.message || responseData.error;
-
-          // Si es un error genérico del backend, dar más contexto
-          if (backendMessage === 'Internal server error') {
-            errorMessage =
-              'Error en el servidor. Por favor contacta al administrador. Detalles: Verifica que Stripe esté configurado correctamente y que el plan exista.';
-            console.error('🚨 Backend error genérico. Posibles causas:', {
-              causa1: 'Stripe API keys no configuradas en el backend',
-              causa2: 'Plan ID no existe en la base de datos',
-              causa3: 'Provider ID no existe o es inválido',
-              causa4: 'Error de conexión con Stripe',
-              providerId: checkoutData.providerId,
-              planId: checkoutData.planId,
-            });
-          } else {
-            errorMessage = backendMessage || JSON.stringify(responseData);
+        if (response.status === 401) {
+          console.log('🔒 Unauthorized, redirecting to login...');
+          if (intervalRef.current) {
+            clearInterval(intervalRef.current);
           }
-          console.log('📝 Extracted message:', errorMessage);
-        } else if (typeof responseData === 'string') {
-          console.log('📝 Is string, trying to parse...');
-          try {
-            const parsed = JSON.parse(responseData);
-            errorMessage = parsed.message || parsed.error || errorMessage;
-            console.log('📝 Parsed and extracted:', errorMessage);
-          } catch {
-            errorMessage = responseData;
-            console.log('📝 Could not parse, using as is:', errorMessage);
-          }
+          router.push('/login');
+          return;
         }
 
-        console.log('🚨 Final error message:', errorMessage);
-        throw new Error(errorMessage);
+        // Si es otro error y aún no agotamos intentos, continuar
+        if (attempts < maxAttempts) {
+          console.log(`⚠️ Error response (${response.status}), will retry...`);
+          return;
+        }
+
+        // Si ya agotamos intentos, mostrar error
+        throw new Error('No se pudo verificar la suscripción');
       }
 
-      // Verificar que tenemos la URL
-      const { url } = typeof responseData === 'object' ? responseData : { url: null };
+      const subscriptions: Subscription[] = await response.json();
+      console.log('📋 Subscriptions received:', subscriptions);
 
-      if (!url) {
-        console.error('❌ No URL in response:', responseData);
-        throw new Error('No se recibió URL de checkout de Stripe');
+      // Buscar suscripción activa
+      const activeSub = Array.isArray(subscriptions)
+        ? subscriptions.find(
+            (sub: Subscription) =>
+              sub.providerId === user.id && (sub.paymentStatus === true || sub.isActive === true)
+          )
+        : null;
+
+      if (activeSub) {
+        console.log('✅ Active subscription found!', activeSub);
+
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current);
+        }
+
+        setStatus('success');
+        setMessage('¡Tu suscripción se ha activado exitosamente!');
+
+        setTimeout(() => {
+          router.push('/dashboard');
+        }, 2000);
+      } else if (attempts >= maxAttempts) {
+        console.log('⏱️ Max attempts reached without finding subscription');
+
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current);
+        }
+
+        setStatus('timeout');
+        setMessage(
+          'Tu pago fue procesado pero la activación está tardando más de lo esperado. Por favor espera unos minutos y recarga la página.'
+        );
+      } else {
+        console.log(`ℹ️ No active subscription yet, continuing...`);
       }
+    } catch (error) {
+      console.error('❌ Error in checkSubscription:', error);
 
-      console.log('✅ Stripe Checkout URL received:', url);
-      console.log('🔄 Redirecting to Stripe...');
-
-      // Redirect to Stripe Checkout
-      window.location.href = url;
-    } catch (err) {
-      console.log('❌ CATCH BLOCK REACHED');
-      console.log('❌ Error type:', typeof err);
-      console.log('❌ Error:', err);
-      console.log('❌ Error message:', err instanceof Error ? err.message : 'Not an Error object');
-      console.log('❌ Error stack:', err instanceof Error ? err.stack : 'No stack');
-
-      console.error('❌ Error completo:', {
-        error: err,
-        message: err instanceof Error ? err.message : 'Unknown error',
-        stack: err instanceof Error ? err.stack : undefined,
-        stringified: JSON.stringify(err, Object.getOwnPropertyNames(err)),
-      });
-
-      setError(err instanceof Error ? err.message : 'Error inesperado al procesar la suscripción');
-    } finally {
-      setProcessing(false);
+      // Solo mostrar error si agotamos todos los intentos
+      if (attempts >= maxAttempts) {
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current);
+        }
+        setStatus('error');
+        setMessage(
+          'No pudimos verificar tu suscripción después de varios intentos. Por favor contacta a soporte.'
+        );
+      }
     }
   };
-
-  const handleCancelSubscription = async () => {
-    if (!userSubscription || !token) return;
-
-    const confirmed = confirm('¿Estás seguro de que quieres cancelar tu suscripción?');
-    if (!confirmed) return;
-
-    setProcessing(true);
-    setError(null);
-
-    try {
-      const backendUrl = 'http://localhost:3000';
-
-      const response = await fetch(`${backendUrl}/subscription/${userSubscription.id}`, {
-        method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          status: 'cancelled',
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Error al cancelar la suscripción');
-      }
-
-      console.log('✅ Subscription cancelled');
-      setUserSubscription(null);
-      showSuccessMessage('Suscripción cancelada exitosamente');
-
-      // Reload data
-      await fetchData();
-    } catch (err) {
-      console.error('❌ Error cancelling subscription:', err);
-      setError(err instanceof Error ? err.message : 'Error al cancelar la suscripción');
-    } finally {
-      setProcessing(false);
-    }
-  };
-
-  const showSuccessMessage = (message: string) => {
-    const successMsg = document.createElement('div');
-    successMsg.className =
-      'fixed top-4 right-4 bg-emerald-500 text-white px-6 py-3 rounded-xl shadow-lg z-50 flex items-center gap-2';
-    successMsg.innerHTML = `<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg> <span>${message}</span>`;
-    document.body.appendChild(successMsg);
-    setTimeout(() => successMsg.remove(), 4000);
-  };
-
-  // Solo mostrar plan Premium
-  const premiumPlan = plans.find((p) => p.price > 0 || p.name.toLowerCase().includes('premium'));
-
-  const hasActiveSubscription = !!(
-    userSubscription &&
-    (userSubscription.status === 'active' || userSubscription.isActive === true)
-  );
-
-  const activePlan = hasActiveSubscription
-    ? plans.find((p) => p.id === userSubscription?.planId)
-    : null;
-
-  const daysRemaining = userSubscription?.endDate
-    ? Math.max(
-        0,
-        Math.ceil(
-          (new Date(userSubscription.endDate).getTime() - new Date().getTime()) /
-            (1000 * 60 * 60 * 24)
-        )
-      )
-    : 0;
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-cyan-50 to-emerald-50 flex items-center justify-center pt-24">
-        <div className="text-center">
-          <Loader2 className="w-12 h-12 text-blue-600 animate-spin mx-auto mb-4" />
-          <p className="text-gray-600">Cargando planes...</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-cyan-50 to-emerald-50 py-12 px-4 pt-24">
-      <div className="max-w-7xl mx-auto">
-        {/* Background Effects */}
-        <div className="fixed inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-0 right-0 w-96 h-96 bg-blue-300/20 rounded-full blur-3xl animate-pulse"></div>
-          <div
-            className="absolute bottom-0 left-0 w-96 h-96 bg-emerald-300/20 rounded-full blur-3xl animate-pulse"
-            style={{ animationDelay: '1s' }}
-          ></div>
-        </div>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-cyan-50 to-emerald-50 flex items-center justify-center px-4 pt-24">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl p-8 max-w-md w-full text-center"
+      >
+        {!searchParams.get('session_id') && status === 'loading' && (
+          <div className="mb-4 p-3 bg-yellow-50 border-2 border-yellow-200 rounded-xl">
+            <div className="flex items-center gap-2 text-yellow-700 text-sm">
+              <AlertTriangle className="w-4 h-4" />
+              <span>Esperando confirmación del pago...</span>
+            </div>
+          </div>
+        )}
 
-        {/* Error Message */}
-        {error && (
+        {status === 'loading' && (
+          <>
+            <Loader2 className="w-16 h-16 text-blue-600 animate-spin mx-auto mb-4" />
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">Procesando tu pago...</h1>
+            <p className="text-gray-600 mb-4">{message}</p>
+            <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
+              <Clock className="w-4 h-4" />
+              <span>
+                Intento {attempts} de {maxAttempts}
+              </span>
+            </div>
+            <p className="text-xs text-gray-400 mt-4">Esto puede tardar hasta 1-2 minutos</p>
+          </>
+        )}
+
+        {status === 'success' && (
           <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="relative z-10 bg-red-50 border-2 border-red-200 rounded-2xl p-4 mb-6 flex items-center gap-3 max-w-2xl mx-auto"
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ type: 'spring', duration: 0.6 }}
           >
-            <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
-            <span className="text-red-700">{error}</span>
-            <button onClick={() => setError(null)} className="ml-auto">
-              <X className="w-5 h-5 text-red-600" />
-            </button>
+            <div className="w-16 h-16 bg-gradient-to-r from-green-500 to-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
+              <CheckCircle className="w-10 h-10 text-white" />
+            </div>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">¡Pago Exitoso!</h1>
+            <p className="text-gray-600 mb-6">{message}</p>
+            <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span>Redirigiendo al dashboard...</span>
+            </div>
           </motion.div>
         )}
 
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-12 relative z-10"
-        >
+        {status === 'timeout' && (
           <motion.div
-            animate={{ rotate: [0, 10, -10, 0] }}
-            transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
-            className="inline-flex mb-6"
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ type: 'spring', duration: 0.6 }}
           >
-            <div className="bg-gradient-to-r from-blue-500 via-cyan-500 to-emerald-500 p-4 rounded-2xl shadow-lg">
-              <Crown className="w-12 h-12 text-white" />
+            <div className="w-16 h-16 bg-yellow-500 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Clock className="w-10 h-10 text-white" />
+            </div>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">Activación Pendiente</h1>
+            <p className="text-gray-600 mb-6">{message}</p>
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={() => window.location.reload()}
+                className="w-full bg-gradient-to-r from-blue-500 to-cyan-500 text-white py-3 rounded-xl font-semibold hover:from-blue-600 hover:to-cyan-600 transition-all"
+              >
+                Recargar página
+              </button>
+              <button
+                onClick={() => router.push('/subscriptions')}
+                className="w-full bg-gray-200 text-gray-700 py-3 rounded-xl font-semibold hover:bg-gray-300 transition-all flex items-center justify-center gap-2"
+              >
+                Volver a Suscripciones
+                <ArrowRight className="w-5 h-5" />
+              </button>
             </div>
           </motion.div>
+        )}
 
-          <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-600 via-cyan-600 to-emerald-600 bg-clip-text text-transparent mb-4">
-            Planes de Suscripción
-          </h1>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Elige el plan que mejor se adapte a tus necesidades como proveedor
-          </p>
-
-          {hasActiveSubscription && activePlan && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="mt-6"
+        {status === 'error' && (
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ type: 'spring', duration: 0.6 }}
+          >
+            <div className="w-16 h-16 bg-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
+              <XCircle className="w-10 h-10 text-white" />
+            </div>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">Error de Verificación</h1>
+            <p className="text-gray-600 mb-6">{message}</p>
+            <button
+              onClick={() => router.push('/subscriptions')}
+              className="w-full bg-gradient-to-r from-blue-500 to-cyan-500 text-white py-3 rounded-xl font-semibold hover:from-blue-600 hover:to-cyan-600 transition-all flex items-center justify-center gap-2"
             >
-              <div className="inline-flex flex-col gap-2 items-center">
-                <span className="inline-block bg-gradient-to-r from-green-500 to-emerald-600 text-white px-6 py-2 text-base rounded-full shadow-lg">
-                  ✓ Plan {activePlan.name} Activo - {daysRemaining} días restantes
-                </span>
-                <button
-                  onClick={handleCancelSubscription}
-                  disabled={processing}
-                  className="text-sm text-red-600 hover:text-red-700 underline disabled:opacity-50"
-                >
-                  Cancelar suscripción
-                </button>
-              </div>
-            </motion.div>
-          )}
-        </motion.div>
-
-        {/* Plans Grid */}
-        <div className="max-w-2xl mx-auto mb-12 relative z-10">
-          {/* SOLO PREMIUM PLAN */}
-          {premiumPlan && (
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.3 }}
-              className={`bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl hover:shadow-3xl transition-all overflow-hidden flex flex-col ${
-                hasActiveSubscription && userSubscription?.planId === premiumPlan.id
-                  ? 'ring-4 ring-green-500'
-                  : 'ring-4 ring-blue-500'
-              }`}
-            >
-              <div className="absolute top-4 right-4 z-20">
-                <span className="inline-block bg-gradient-to-r from-yellow-500 to-orange-500 text-white px-4 py-2 rounded-full text-sm font-bold shadow-lg">
-                  ⭐ MÁS POPULAR
-                </span>
-              </div>
-
-              <div className="bg-gradient-to-r from-blue-500 via-cyan-500 to-emerald-500 p-8 text-white relative overflow-hidden">
-                <div className="absolute top-0 right-0 -mt-4 -mr-4 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
-                <div className="relative z-10">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="p-3 bg-white/20 backdrop-blur-sm rounded-xl">
-                      <Crown className="w-8 h-8 text-white" />
-                    </div>
-                    <div>
-                      <h3 className="text-3xl font-bold">{premiumPlan.name}</h3>
-                      <p className="text-white/90 mt-1">{premiumPlan.description}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-baseline gap-3">
-                    <span className="text-6xl font-bold">${premiumPlan.price}</span>
-                    <div>
-                      <div className="text-white/90 text-xl">MXN/mes</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="p-8 flex-1 flex flex-col">
-                <div className="space-y-4 mb-8 flex-1">
-                  <h4 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-                    <Star className="w-5 h-5 text-blue-600" />
-                    Todo lo de Gratuito, más:
-                  </h4>
-
-                  {[
-                    { text: 'Visualizaciones ilimitadas', icon: Eye },
-                    { text: 'Badge Premium', icon: Crown },
-                    { text: 'Destacado en búsquedas', icon: TrendingUp },
-                    { text: 'Prioridad en resultados', icon: Target },
-                    { text: 'Estadísticas avanzadas', icon: Sparkles },
-                    { text: 'Mayor alcance', icon: Users },
-                    { text: 'Soporte 24/7', icon: Shield },
-                  ].map((feature, idx) => (
-                    <div key={idx} className="flex items-start gap-3">
-                      <div className="p-1 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-full">
-                        <Check className="w-5 h-5 text-blue-600" />
-                      </div>
-                      <div className="flex-1 flex items-center gap-2">
-                        <feature.icon className="w-4 h-4 text-blue-600" />
-                        <span className="text-gray-700">{feature.text}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <button
-                  onClick={() =>
-                    handleSubscribe(premiumPlan.id, premiumPlan.name, premiumPlan.price)
-                  }
-                  disabled={
-                    processing ||
-                    (hasActiveSubscription && userSubscription?.planId === premiumPlan.id)
-                  }
-                  className={`w-full text-lg py-4 rounded-xl shadow-xl transition-all font-bold flex items-center justify-center gap-2 ${
-                    hasActiveSubscription && userSubscription?.planId === premiumPlan.id
-                      ? 'bg-gray-400 cursor-not-allowed text-white'
-                      : 'bg-gradient-to-r from-blue-500 via-cyan-500 to-emerald-500 hover:from-blue-600 hover:via-cyan-600 hover:to-emerald-600 text-white'
-                  } disabled:opacity-50`}
-                >
-                  {processing ? (
-                    <Loader2 className="w-6 h-6 animate-spin" />
-                  ) : hasActiveSubscription && userSubscription?.planId === premiumPlan.id ? (
-                    <>
-                      <Shield className="w-6 h-6" />
-                      Plan Activo
-                    </>
-                  ) : (
-                    <>
-                      Obtener Premium
-                      <ArrowRight className="w-6 h-6" />
-                    </>
-                  )}
-                </button>
-
-                {!(hasActiveSubscription && userSubscription?.planId === premiumPlan.id) && (
-                  <p className="text-center text-sm text-gray-500 mt-4">
-                    💳 Pago seguro con Stripe
-                  </p>
-                )}
-              </div>
-            </motion.div>
-          )}
-        </div>
-
-        {/* Additional Benefits */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
-          className="grid md:grid-cols-3 gap-6 relative z-10"
-        >
-          <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-lg p-6 text-center border-2 border-white/50">
-            <div className="w-16 h-16 bg-gradient-to-r from-blue-100 to-cyan-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Shield className="w-8 h-8 text-blue-600" />
-            </div>
-            <h3 className="text-lg font-bold text-gray-900 mb-2">Pago Seguro</h3>
-            <p className="text-gray-600">Procesado con Stripe</p>
-          </div>
-
-          <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-lg p-6 text-center border-2 border-white/50">
-            <div className="w-16 h-16 bg-gradient-to-r from-emerald-100 to-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Zap className="w-8 h-8 text-emerald-600" />
-            </div>
-            <h3 className="text-lg font-bold text-gray-900 mb-2">Activación Inmediata</h3>
-            <p className="text-gray-600">Acceso instantáneo</p>
-          </div>
-
-          <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-lg p-6 text-center border-2 border-white/50">
-            <div className="w-16 h-16 bg-gradient-to-r from-cyan-100 to-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Star className="w-8 h-8 text-cyan-600" />
-            </div>
-            <h3 className="text-lg font-bold text-gray-900 mb-2">Sin Compromisos</h3>
-            <p className="text-gray-600">Cancela cuando quieras</p>
-          </div>
-        </motion.div>
-      </div>
+              Volver a Suscripciones
+              <ArrowRight className="w-5 h-5" />
+            </button>
+          </motion.div>
+        )}
+      </motion.div>
     </div>
   );
 }
