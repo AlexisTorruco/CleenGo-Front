@@ -127,7 +127,7 @@ export default function EditProfileProvider() {
     setError(null);
 
     try {
-      const backendUrl = 'http://localhost:3000';
+      const backendUrl = 'VITE_BACKEND_URL';
       const response = await fetch(`${backendUrl}/provider/${user.id}`, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -226,7 +226,7 @@ export default function EditProfileProvider() {
     setError(null);
 
     try {
-      const backendUrl = 'http://localhost:3000';
+      const backendUrl = 'VITE_BACKEND_URL';
       const formDataUpload = new FormData();
       formDataUpload.append('file', selectedFile);
 
@@ -346,7 +346,7 @@ export default function EditProfileProvider() {
     setError(null);
 
     try {
-      const backendUrl = 'http://localhost:3000';
+      const backendUrl = 'VITE_BACKEND_URL';
       const response = await fetch(`${backendUrl}/provider/${user.id}`, {
         method: 'DELETE',
         headers: {
