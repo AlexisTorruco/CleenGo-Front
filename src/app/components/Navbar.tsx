@@ -1,11 +1,19 @@
-//src/app/components/Navbar.tsx
+// src/app/components/Navbar.tsx
 "use client";
 
 import Link from "next/link";
 import Image from "next/image";
-import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import {
+  useState,
+  useEffect,
+  useMemo,
+  useCallback,
+  useRef,
+} from "react";
 import { useAuth } from "@/app/contexts/AuthContext";
 import { io, Socket } from "socket.io-client";
+import Swal from "sweetalert2";
+import { useRouter } from "next/navigation";
 
 type UnreadSummaryItem = {
   appointmentId: string;
@@ -28,9 +36,10 @@ type AppointmentLite = {
 };
 
 export default function Navbar() {
-  // ✅ aquí solo agrego token, no cambio nada más
+  // 👉 Versión extendida del hook
   const { user, token, logout } = useAuth();
   const role = user?.role;
+  const router = useRouter();
 
   const [isOpen, setIsOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
@@ -39,10 +48,10 @@ export default function Navbar() {
   const [notifOpen, setNotifOpen] = useState(false);
   const [notifLoading, setNotifLoading] = useState(false);
   const [unreadSummary, setUnreadSummary] = useState<UnreadSummaryItem[]>([]);
-  // state to track which user's submenu is open inside notifications
-  const [selectOpenUserId, setSelectOpenUserId] = useState<string | null>(null);
+  const [selectOpenUserId, setSelectOpenUserId] = useState<string | null>(
+    null
+  );
 
-  // cache + loading state for appointment lite fetches
   const [apptCache, setApptCache] = useState<Record<string, AppointmentLite>>(
     {}
   );
@@ -67,14 +76,39 @@ export default function Navbar() {
     setIsOpen(false);
   };
 
-  // Logout que también cierra el menú
-  const handleLogout = () => {
+  // 🔐 Logout con confirmación + limpieza + redirect
+  const handleLogout = async () => {
+    const result = await Swal.fire({
+      title: "¿Cerrar sesión?",
+      text: "Tu sesión se cerrará",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#14B8A6",
+      cancelButtonColor: "#d33",
+      confirmButtonText: "Sí, cerrar sesión",
+      cancelButtonText: "Cancelar",
+    });
+
+    if (!result.isConfirmed) return;
+
+    // limpieza que tenías tú
     logout();
     setIsOpen(false);
     setNotifOpen(false);
     setSelectOpenUserId(null);
     socketRef.current?.disconnect();
     socketRef.current = null;
+
+    await Swal.fire({
+      icon: "success",
+      title: "Sesión cerrada",
+      text: "Has salido correctamente",
+      timer: 1500,
+      showConfirmButton: false,
+    });
+
+    // redirección que usaba tu compañero
+    router.push("/");
   };
 
   // ✅ Agrupar unread por persona
@@ -135,7 +169,7 @@ export default function Navbar() {
     }
   }, [backendUrl, token, effectiveUser]);
 
-  // Helpers for status label / pill class
+  // Helpers para status label / pill class
   const getStatusLabel = (status: string) => {
     const s = String(status ?? "").toLowerCase();
     if (s.includes("confirmed")) return "Confirmada";
@@ -159,7 +193,6 @@ export default function Navbar() {
   const formatAppointmentLabel = (a?: AppointmentLite) => {
     try {
       if (!a?.date) return "";
-      // Build ISO strings using date + hour (assume backend provides HH:mm)
       const startIso = `${a.date}T${a.startHour ?? "00:00"}`;
       const endIso = `${a.date}T${a.endHour ?? a.startHour ?? "00:00"}`;
       const start = new Date(startIso);
@@ -182,16 +215,18 @@ export default function Navbar() {
 
       return `${dateStr} · ${startTime} - ${endTime}`;
     } catch (e) {
-      return `${a?.date ?? ""} · ${a?.startHour ?? ""} - ${a?.endHour ?? ""}`;
+      return `${a?.date ?? ""} · ${a?.startHour ?? ""} - ${
+        a?.endHour ?? ""
+      }`;
     }
   };
 
-  // Fetch a light version of an appointment and cache it
+  // Fetch light appointment + cache
   const fetchAppointmentLite = useCallback(
     async (appointmentId: string) => {
       if (!backendUrl || !token) return;
-      if (apptCache[appointmentId]) return; // already cached
-      if (apptLoading[appointmentId]) return; // in flight
+      if (apptCache[appointmentId]) return;
+      if (apptLoading[appointmentId]) return;
 
       setApptLoading((prev) => ({ ...prev, [appointmentId]: true }));
 
@@ -226,7 +261,7 @@ export default function Navbar() {
     [backendUrl, token, apptCache, apptLoading]
   );
 
-  // Cargar unread al montar sesión + refrescar al volver a la pestaña
+  // Cargar unread al montar sesión + al volver a la pestaña
   useEffect(() => {
     if (!effectiveUser || !token) return;
     fetchUnreadSummary();
@@ -236,10 +271,10 @@ export default function Navbar() {
     return () => window.removeEventListener("focus", onFocus);
   }, [effectiveUser, token, fetchUnreadSummary]);
 
+  // Socket.io para updates en tiempo real
   useEffect(() => {
     if (!backendUrl || !token || !effectiveUser) return;
 
-    // evitar duplicados
     socketRef.current?.disconnect();
     socketRef.current = null;
 
@@ -254,13 +289,10 @@ export default function Navbar() {
     socketRef.current = s;
 
     s.on("connect", () => {
-      // opcional: al conectar, refrescar snapshot por si acaso
       fetchUnreadSummary();
     });
 
-    // ✅ EVENTO QUE EMITE EL BACK
     s.on("unreadSummaryUpdated", (payload: any) => {
-      // si por alguna razón llega otro user, ignoramos
       if (!effectiveUser?.id) return;
       if (
         payload?.userId &&
@@ -268,7 +300,9 @@ export default function Navbar() {
       )
         return;
 
-      const summary = Array.isArray(payload?.summary) ? payload.summary : [];
+      const summary = Array.isArray(payload?.summary)
+        ? payload.summary
+        : [];
       setUnreadSummary(summary);
     });
 
@@ -297,7 +331,6 @@ export default function Navbar() {
   }, [notifOpen]);
 
   const goToChat = (appointmentId: string) => {
-    // ✅ ruta única que ya usas y funciona para ambos roles
     setNotifOpen(false);
     setIsOpen(false);
     window.location.href = `/client/chat/${appointmentId}`;
@@ -316,7 +349,6 @@ export default function Navbar() {
 
     try {
       setNotifLoading(true);
-      // ✅ marcamos read por cada cita donde esa persona te dejó mensajes sin leer
       await Promise.all(
         appointmentIds.map((id) => markAllReadForAppointment(id))
       );
@@ -347,6 +379,7 @@ export default function Navbar() {
             width={180}
             height={60}
             className="h-12 w-auto"
+            priority
           />
         </Link>
 
@@ -364,7 +397,6 @@ export default function Navbar() {
                 className="relative p-2 rounded-lg hover:bg-gray-100 text-gray-700 transition"
                 title="Mensajes"
               >
-                {/* Bell icon */}
                 <svg
                   className="w-6 h-6"
                   fill="none"
@@ -380,13 +412,12 @@ export default function Navbar() {
                 </svg>
 
                 {totalUnread > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[11px] font-bold w-5 h-5 rounded-full flex items-center justify-center">
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[11px] font-bold w-5 h-5 rounded-full flex items-center justifyCenter">
                     {totalUnread > 99 ? "99+" : totalUnread}
                   </span>
                 )}
               </button>
 
-              {/* Dropdown */}
               {notifOpen && (
                 <div className="absolute right-0 mt-2 w-[340px] bg-white border border-gray-200 rounded-2xl shadow-xl overflow-hidden">
                   <div className="px-4 py-3 border-b flex items-center justify-between">
@@ -433,8 +464,6 @@ export default function Navbar() {
                         const fullName = `${g.otherUser.name} ${
                           g.otherUser.surname ?? ""
                         }`.trim();
-
-                        // ✅ “Entrar a verlos”: abre el chat de la primera cita con esa persona
                         const firstAppointmentId = g.appointmentIds[0];
 
                         return (
@@ -573,7 +602,9 @@ export default function Navbar() {
                   strokeLinejoin="round"
                   strokeWidth={2}
                   d={
-                    isOpen ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16M4 18h16"
+                    isOpen
+                      ? "M6 18L18 6M6 6l12 12"
+                      : "M4 6h16M4 12h16M4 18h16"
                   }
                 />
               </svg>
@@ -581,7 +612,7 @@ export default function Navbar() {
           </div>
         </div>
 
-        {/* Menu */}
+        {/* Menu principal */}
         <div
           suppressHydrationWarning
           className={`lg:flex lg:items-center lg:gap-6 ${
@@ -590,9 +621,7 @@ export default function Navbar() {
               : "hidden lg:flex"
           }`}
         >
-          {/* ------------------- */}
-          {/* GUEST NAVBAR       */}
-          {/* ------------------- */}
+          {/* GUEST NAVBAR */}
           {!effectiveUser && (
             <div className="flex flex-col lg:flex-row lg:items-center lg:gap-6 gap-3 w-full">
               <Link
@@ -633,9 +662,7 @@ export default function Navbar() {
             </div>
           )}
 
-          {/* ------------------- */}
-          {/* CLIENT NAVBAR       */}
-          {/* ------------------- */}
+          {/* CLIENT NAVBAR */}
           {effectiveUser && effectiveRole === "client" && (
             <div className="flex flex-col lg:flex-row lg:items-center lg:gap-6 gap-3 w-full">
               <Link
@@ -714,9 +741,7 @@ export default function Navbar() {
             </div>
           )}
 
-          {/* ------------------- */}
-          {/* PROVIDER NAVBAR     */}
-          {/* ------------------- */}
+          {/* PROVIDER NAVBAR */}
           {effectiveUser && effectiveRole === "provider" && (
             <div className="flex flex-col lg:flex-row lg:items-center lg:gap-6 gap-3 w-full">
               <Link
