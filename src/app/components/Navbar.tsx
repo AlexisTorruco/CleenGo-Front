@@ -509,12 +509,38 @@ export default function Navbar() {
     </>
   );
 
+  // ✅ NUEVO: Links para admin
+  const AdminLinks = (
+    <>
+      <Link
+        href="/admin/dashboard"
+        onClick={closeAll}
+        className="text-gray-700 font-medium hover:text-teal-500 transition"
+      >
+        Dashboard
+      </Link>
+
+      <div className="text-gray-700 font-medium">
+        Admin: <span className="text-teal-500 font-semibold">{user?.name}</span>
+      </div>
+
+      <button
+        onClick={handleLogout}
+        className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg font-medium hover:bg-gray-200 transition"
+      >
+        Cerrar sesión
+      </button>
+    </>
+  );
+
   const MenuLinks = !effectiveUser
     ? GuestLinks
     : effectiveRole === "client"
     ? ClientLinks
     : effectiveRole === "provider"
     ? ProviderLinks
+    : effectiveRole === "admin"
+    ? AdminLinks
     : null;
 
   return (
@@ -542,7 +568,7 @@ export default function Navbar() {
 
           {/* Right actions (siempre visibles) */}
           <div className="flex items-center gap-2">
-            {/* 🔔 Bell - ahora también en móvil (no se esconde) */}
+            {/* 🔔 Bell */}
             {effectiveUser && (
               <div className="relative" ref={notifRef}>
                 <button
@@ -767,17 +793,15 @@ export default function Navbar() {
         </div>
       </nav>
 
-      {/* Drawer Mobile (corrige tu problema de responsive) */}
+      {/* Drawer Mobile */}
       {mobileOpen && (
         <div className="fixed inset-0 z-[60] lg:hidden">
-          {/* Backdrop */}
           <button
             className="absolute inset-0 bg-black/30"
             onClick={closeAll}
             aria-label="Cerrar menú"
           />
 
-          {/* Panel */}
           <div className="absolute right-0 top-0 h-full w-[86%] max-w-sm bg-white shadow-2xl flex flex-col">
             <div className="h-16 px-4 border-b flex items-center justify-between">
               <Link
@@ -816,16 +840,13 @@ export default function Navbar() {
             </div>
 
             <div className="p-4 flex-1 overflow-y-auto">
-              <div className="flex flex-col gap-4">
-                {/* Links */}
-                {MenuLinks}
-              </div>
+              <div className="flex flex-col gap-4">{MenuLinks}</div>
             </div>
           </div>
         </div>
       )}
 
-      {/* Spacer para que no tape contenido por ser fixed */}
+      {/* Spacer para fixed nav */}
       <div className="h-16" />
     </>
   );

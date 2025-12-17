@@ -1,7 +1,14 @@
-'use client';
+// CleenGo-Front/src/app/contexts/AuthContext.tsx
+"use client";
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { User as AuthUser } from '../services/auth';
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+} from "react";
+import { User as AuthUser } from "../services/auth";
 
 interface User {
   id: string;
@@ -9,7 +16,7 @@ interface User {
   name: string;
   surname?: string;
   profileImgUrl?: string;
-  role: 'client' | 'provider' | 'admin';
+  role: "client" | "provider" | "admin";
 }
 
 interface AuthContextType {
@@ -23,15 +30,15 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(() => {
-    if (typeof window === 'undefined') return null;
+    if (typeof window === "undefined") return null;
 
-    const storedUser = localStorage.getItem('user');
+    const storedUser = localStorage.getItem("user");
     if (storedUser) {
       try {
         return JSON.parse(storedUser);
       } catch (err) {
-        console.error('Error parsing stored user:', err);
-        localStorage.removeItem('user');
+        console.error("Error parsing stored user:", err);
+        localStorage.removeItem("user");
         return null;
       }
     }
@@ -39,22 +46,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   });
 
   const [token, setToken] = useState<string | null>(() => {
-    if (typeof window === 'undefined') return null;
-    return localStorage.getItem('token');
+    if (typeof window === "undefined") return null;
+    return localStorage.getItem("token");
   });
 
   // Sincronizar cambios de storage en otras ventanas
   useEffect(() => {
     const handleStorageChange = () => {
-      const storedUser = localStorage.getItem('user');
-      const storedToken = localStorage.getItem('token');
+      const storedUser = localStorage.getItem("user");
+      const storedToken = localStorage.getItem("token");
 
       if (storedUser && storedToken) {
         try {
           setUser(JSON.parse(storedUser));
           setToken(storedToken);
         } catch (err) {
-          console.error('Error parsing stored user:', err);
+          console.error("Error parsing stored user:", err);
         }
       } else {
         setUser(null);
@@ -62,32 +69,37 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     };
 
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
   }, []);
 
-  const login = (rawUser: AuthUser | Record<string, unknown>, token: string) => {
+  const login = (
+    rawUser: AuthUser | Record<string, unknown>,
+    token: string
+  ) => {
     // Validar y normalizar el rol
-    const validRoles = ['client', 'provider', 'admin'];
-    const role = validRoles.includes(String(rawUser.role)) ? String(rawUser.role) : 'client';
+    const validRoles = ["client", "provider", "admin"];
+    const role = validRoles.includes(String(rawUser.role))
+      ? String(rawUser.role)
+      : "client";
 
     const normalizedUser: User = {
       id: String(rawUser.id),
       email: String(rawUser.email),
-      name: String(rawUser.name || (rawUser as Record<string, unknown>).full_name || ''),
-      surname: String(rawUser.surname || ''),
-      role: role as 'client' | 'provider' | 'admin',
+      name: String(
+        rawUser.name || (rawUser as Record<string, unknown>).full_name || ""
+      ),
+      surname: String(rawUser.surname || ""),
+      role: role as "client" | "provider" | "admin",
     };
 
     setUser(normalizedUser);
     setToken(token);
 
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('user', JSON.stringify(normalizedUser));
-      localStorage.setItem('token', token);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("user", JSON.stringify(normalizedUser));
+      localStorage.setItem("token", token);
       document.cookie = `token=${token}; path=/`;
-
-
     }
   };
 
@@ -95,23 +107,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setUser(null);
     setToken(null);
 
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('user');
-      localStorage.removeItem('token');
-      document.cookie = 'token=; Max-Age=0; path=/';
-
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("user");
+      localStorage.removeItem("token");
+      document.cookie = "token=; Max-Age=0; path=/";
     }
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, login, logout }}>{children}</AuthContext.Provider>
+    <AuthContext.Provider value={{ user, token, login, logout }}>
+      {children}
+    </AuthContext.Provider>
   );
 };
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth debe usarse dentro de un AuthProvider');
+    throw new Error("useAuth debe usarse dentro de un AuthProvider");
   }
   return context;
 };
