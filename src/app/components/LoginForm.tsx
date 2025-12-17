@@ -1,13 +1,14 @@
-'use client';
+//CleenGo-Front/src/app/components/LoginForm.tsx
+"use client";
 
-import { useState, FormEvent, useMemo } from 'react';
-import Link from 'next/link';
-import Image from 'next/image';
-import { useRouter } from 'next/navigation';
-import { login } from '../services/auth';
-import OAuthLoginButton from './OAuthLoginButton';
-import { useAuth } from '../contexts/AuthContext';
-import Swal from 'sweetalert2';
+import { useState, FormEvent, useMemo } from "react";
+import Link from "next/link";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
+import { login } from "../services/auth";
+import OAuthLoginButton from "./OAuthLoginButton";
+import { useAuth } from "../contexts/AuthContext";
+import Swal from "sweetalert2";
 
 // Iconos SVG
 const EyeIcon = () => (
@@ -68,9 +69,9 @@ const LockIcon = () => (
 );
 
 export default function LoginForm() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [loginError, setLoginError] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loginError, setLoginError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
   const router = useRouter();
@@ -96,31 +97,32 @@ export default function LoginForm() {
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setLoginError('');
+    setLoginError("");
 
     try {
       const res = await login({ email, password });
       loginContext(res.user, res.accessToken);
 
       Swal.fire({
-        icon: 'success',
-        title: 'Inicio de sesión exitoso',
-        text: res?.message || 'Bienvenido/a a CleenGo',
-        confirmButtonText: 'Continuar',
+        icon: "success",
+        title: "Inicio de sesión exitoso",
+        text: res?.message || "Bienvenido/a a CleenGo",
+        confirmButtonText: "Continuar",
       }).then(() => {
-        router.push('/');
+        router.push("/");
       });
     } catch (err: unknown) {
       const error = err as { response?: { data?: { message?: string } } };
-      const message = error?.response?.data?.message || 'Credenciales no válidas';
+      const message =
+        error?.response?.data?.message || "Credenciales no válidas";
 
       setLoginError(message);
 
       await Swal.fire({
-        icon: 'error',
-        title: 'Error al iniciar sesión',
+        icon: "error",
+        title: "Error al iniciar sesión",
         text: message,
-        confirmButtonText: 'Cerrar',
+        confirmButtonText: "Cerrar",
       });
     }
   };
@@ -129,11 +131,13 @@ export default function LoginForm() {
   const renderRule = (ok: boolean, text: string) => (
     <p
       className={`text-xs flex items-center gap-2 transition-colors ${
-        ok ? 'text-teal-600' : 'text-gray-400'
+        ok ? "text-teal-600" : "text-gray-400"
       }`}
       key={text}
     >
-      <span className={`font-medium text-sm ${ok ? 'scale-110' : ''}`}>{ok ? '✔' : '•'}</span>
+      <span className={`font-medium text-sm ${ok ? "scale-110" : ""}`}>
+        {ok ? "✔" : "•"}
+      </span>
       {text}
     </p>
   );
@@ -153,13 +157,19 @@ export default function LoginForm() {
             />
           </div>
 
-          <h2 className="text-3xl font-bold text-center mb-3 text-gray-800">Iniciar Sesión</h2>
-          <p className="text-center text-gray-500 mb-8">Ingresa a tu cuenta de Cleen Go</p>
+          <h2 className="text-3xl font-bold text-center mb-3 text-gray-800">
+            Iniciar Sesión
+          </h2>
+          <p className="text-center text-gray-500 mb-8">
+            Ingresa a tu cuenta de Cleen Go
+          </p>
 
           <form className="flex flex-col gap-5" onSubmit={handleSubmit}>
             {/* EMAIL */}
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-700">Correo Electrónico</label>
+              <label className="block text-sm font-medium text-gray-700">
+                Correo Electrónico
+              </label>
               <div className="relative">
                 <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
                   <MailIcon />
@@ -171,10 +181,10 @@ export default function LoginForm() {
                     focus:outline-none focus:ring-2 transition-all
                     ${
                       email.length === 0
-                        ? 'border-gray-300 focus:border-[#14B8A6] focus:ring-[#14B8A6]/20'
+                        ? "border-gray-300 focus:border-[#14B8A6] focus:ring-[#14B8A6]/20"
                         : isEmailValid
-                        ? 'border-teal-500 focus:border-teal-600 focus:ring-teal-500/20'
-                        : 'border-red-400 focus:border-red-500 focus:ring-red-400/20'
+                        ? "border-teal-500 focus:border-teal-600 focus:ring-teal-500/20"
+                        : "border-red-400 focus:border-red-500 focus:ring-red-400/20"
                     }
                   `}
                   value={email}
@@ -183,23 +193,27 @@ export default function LoginForm() {
               </div>
 
               {email.length > 0 && !isEmailValid && (
-                <p className="text-red-500 text-xs mt-1 ml-1">Correo inválido</p>
+                <p className="text-red-500 text-xs mt-1 ml-1">
+                  Correo inválido
+                </p>
               )}
             </div>
 
             {/* PASSWORD */}
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-700">Contraseña</label>
+              <label className="block text-sm font-medium text-gray-700">
+                Contraseña
+              </label>
 
               <div
                 className={`
                   flex items-center rounded-xl px-4 py-3.5 bg-white border transition-all
                   ${
                     password.length === 0
-                      ? 'border-gray-300 focus-within:border-[#14B8A6] focus-within:ring-2 focus-within:ring-[#14B8A6]/20'
+                      ? "border-gray-300 focus-within:border-[#14B8A6] focus-within:ring-2 focus-within:ring-[#14B8A6]/20"
                       : allValid
-                      ? 'border-teal-500 focus-within:border-teal-600 focus-within:ring-2 focus-within:ring-teal-500/20'
-                      : 'border-red-400 focus-within:border-red-500 focus-within:ring-2 focus-within:ring-red-400/20'
+                      ? "border-teal-500 focus-within:border-teal-600 focus-within:ring-2 focus-within:ring-teal-500/20"
+                      : "border-red-400 focus-within:border-red-500 focus-within:ring-2 focus-within:ring-red-400/20"
                   }
                 `}
               >
@@ -207,7 +221,7 @@ export default function LoginForm() {
                   <LockIcon />
                 </div>
                 <input
-                  type={showPassword ? 'text' : 'password'}
+                  type={showPassword ? "text" : "password"}
                   placeholder="••••••••"
                   className="flex-1 outline-none bg-transparent text-base"
                   value={password}
@@ -217,20 +231,34 @@ export default function LoginForm() {
                   type="button"
                   onClick={() => setShowPassword((v) => !v)}
                   className="ml-2 text-gray-400 hover:text-gray-600 transition-colors"
-                  aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                  aria-label={
+                    showPassword ? "Ocultar contraseña" : "Mostrar contraseña"
+                  }
                 >
                   {showPassword ? <EyeOffIcon /> : <EyeIcon />}
                 </button>
               </div>
 
+              <div className="flex justify-end">
+                <Link
+                  href="/recover-password"
+                  className="text-sm font-medium text-[#14B8A6] hover:text-[#0F9B8E] transition-colors"
+                >
+                  ¿Olvidaste tu contraseña?
+                </Link>
+              </div>
+
               {/* 🔥 VALIDACIONES EN TIEMPO REAL */}
               {password.length > 0 && (
                 <div className="mt-3 p-3.5 bg-gray-50 rounded-xl space-y-1">
-                  {renderRule(passwordRules.length, 'Mínimo 8 caracteres')}
-                  {renderRule(passwordRules.upper, 'Al menos una MAYÚSCULA')}
-                  {renderRule(passwordRules.lower, 'Al menos una minúscula')}
-                  {renderRule(passwordRules.number, 'Al menos un número')}
-                  {renderRule(passwordRules.special, 'Al menos un símbolo (!@#$%...)')}
+                  {renderRule(passwordRules.length, "Mínimo 8 caracteres")}
+                  {renderRule(passwordRules.upper, "Al menos una MAYÚSCULA")}
+                  {renderRule(passwordRules.lower, "Al menos una minúscula")}
+                  {renderRule(passwordRules.number, "Al menos un número")}
+                  {renderRule(
+                    passwordRules.special,
+                    "Al menos un símbolo (!@#$%...)"
+                  )}
                 </div>
               )}
             </div>
@@ -265,7 +293,7 @@ export default function LoginForm() {
           </div>
 
           <p className="text-sm text-center mt-6 text-gray-600">
-            ¿No tienes cuenta?{' '}
+            ¿No tienes cuenta?{" "}
             <Link
               href="/register"
               className="text-[#14B8A6] font-semibold hover:text-[#0F9B8E] transition-colors"
