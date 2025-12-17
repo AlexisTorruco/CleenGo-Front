@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useAuth } from '../contexts/AuthContext';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '../contexts/AuthContext';
 import { motion } from 'framer-motion';
 import {
+  CheckCircle,
   Crown,
-  Check,
+  Loader2,
   ArrowRight,
   Shield,
   Star,
@@ -16,339 +17,214 @@ import {
   Target,
   Sparkles,
   Zap,
-  AlertCircle,
-  Loader2,
-  X,
+  Check,
 } from 'lucide-react';
 
-// ============================================
-// INTERFACES
-// ============================================
-interface Plan {
+type Plan = {
   id: string;
   name: string;
   price: number;
   description: string;
   isActive: boolean;
-}
+};
 
-interface Subscription {
+type SubscriptionMeResponse = {
   id: string;
-  providerId: string;
-  planId: string;
+  paymentStatus: boolean;
+  isActive: boolean;
   startDate: string;
-  endDate: string;
-  status?: 'active' | 'cancelled' | 'expired';
-  isActive?: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
+  plan?: Plan;
+};
 
-// ============================================
-// COMPONENTE
-// ============================================
-export default function SubscriptionPage() {
-  const { user, token } = useAuth();
+export default function SubscriptionsPage() {
   const router = useRouter();
+  const { token, user } = useAuth();
 
-  const [loading, setLoading] = useState(true);
-  const [processing, setProcessing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [plans, setPlans] = useState<Plan[]>([]);
-  const [userSubscription, setUserSubscription] = useState<Subscription | null>(null);
+  const [plansLoading, setPlansLoading] = useState(true);
 
+  const [checking, setChecking] = useState(true);
+  const [mySub, setMySub] = useState<SubscriptionMeResponse | null>(null);
+
+  const [loadingCheckout, setLoadingCheckout] = useState(false);
+
+  const hasActiveSub = mySub?.paymentStatus === true && mySub?.isActive === true;
+
+  // 1) Traer planes desde DB
   useEffect(() => {
-    if (!user || !token) {
+    const loadPlans = async () => {
+      try {
+        const backendUrl = process.env.VITE_BACKEND_URL;
+        const res = await fetch(`${backendUrl}/plan`, { cache: 'no-store' });
+        const data = await res.json();
+
+        setPlans(Array.isArray(data) ? data : []);
+      } catch {
+        setPlans([]);
+      } finally {
+        setPlansLoading(false);
+      }
+    };
+
+    loadPlans();
+  }, []);
+
+  // 2) Traer mi suscripción
+  useEffect(() => {
+    const loadMe = async () => {
+      try {
+        const backendUrl = process.env.VITE_BACKEND_URL;
+
+        if (!user?.id || !token) {
+          router.push('/login');
+          return;
+        }
+
+        console.log('🔍 Fetching subscription for user:', user.id);
+
+        const res = await fetch(`${backendUrl}/subscription/provider/${user.id}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          cache: 'no-store',
+        });
+
+        console.log('📡 Response status:', res.status);
+        console.log('📡 Response headers:', res.headers.get('content-type'));
+
+        if (!res.ok) {
+          console.error('❌ Response not ok:', res.status);
+          setMySub(null);
+          setChecking(false);
+          return;
+        }
+
+        const contentType = res.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+          console.error('❌ Response is not JSON:', contentType);
+          setMySub(null);
+          setChecking(false);
+          return;
+        }
+
+        const text = await res.text();
+        console.log('📦 Raw response:', text);
+
+        if (!text || text.trim() === '' || text === 'null') {
+          console.log('❌ Empty or null response');
+          setMySub(null);
+          setChecking(false);
+          return;
+        }
+
+        let data;
+        try {
+          data = JSON.parse(text);
+        } catch (parseError) {
+          console.error('❌ JSON parse error:', parseError);
+          console.error('❌ Response text was:', text);
+          setMySub(null);
+          setChecking(false);
+          return;
+        }
+
+        console.log('📦 Subscription data:', data);
+
+        if (!data) {
+          console.log('❌ No subscription found');
+          setMySub(null);
+          setChecking(false);
+          return;
+        }
+
+        console.log('✅ Subscription loaded:', {
+          paymentStatus: data.paymentStatus,
+          isActive: data.isActive,
+        });
+
+        setMySub(data);
+      } catch (err) {
+        console.error('❌ Error fetching subscription:', err);
+        setMySub(null);
+      } finally {
+        setChecking(false);
+      }
+    };
+
+    loadMe();
+  }, [router, token, user]);
+
+  // 3) Determinar plan actual
+  const currentPlan = useMemo(() => {
+    if (mySub?.plan?.id) return mySub.plan;
+
+    const activePlans = plans.filter((p) => p?.isActive === true);
+    if (activePlans.length === 0) return null;
+
+    const sorted = [...activePlans].sort((a, b) => Number(a.price) - Number(b.price));
+    return sorted[0] || null;
+  }, [mySub, plans]);
+
+  // 4) Determinar plan de upgrade
+  const upgradePlan = useMemo(() => {
+    const activePlans = plans.filter((p) => p?.isActive === true);
+    if (activePlans.length === 0) return null;
+
+    const candidates = currentPlan?.id
+      ? activePlans.filter((p) => p.id !== currentPlan.id)
+      : activePlans;
+
+    if (candidates.length === 0) return null;
+
+    const sorted = [...candidates].sort((a, b) => Number(b.price) - Number(a.price));
+    return sorted[0] || null;
+  }, [plans, currentPlan]);
+
+  const handleCheckout = async () => {
+    if (!user?.id || !token) {
       router.push('/login');
       return;
     }
 
-    fetchData();
-  }, [user, token, router]);
+    if (!upgradePlan) {
+      alert('No hay un plan disponible para upgrade.');
+      return;
+    }
 
-  const fetchData = async () => {
-    if (!user?.id || !token) return;
+    if (hasActiveSub) {
+      alert('Ya tienes una suscripción activa ✅');
+      return;
+    }
 
-    setLoading(true);
     try {
+      setLoadingCheckout(true);
       const backendUrl = process.env.VITE_BACKEND_URL;
 
-      // Fetch plans
-      const plansResponse = await fetch(`${backendUrl}/plan`, {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        cache: 'no-store',
-      });
-
-      if (plansResponse.ok) {
-        const plansData = await plansResponse.json();
-        console.log('📋 Plans loaded:', plansData);
-        setPlans(plansData);
-      }
-
-      // Fetch user subscriptions
-      const subsResponse = await fetch(`${backendUrl}/subscription`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        cache: 'no-store',
-      });
-
-      if (subsResponse.ok) {
-        const subsData = await subsResponse.json();
-        console.log('📋 All subscriptions:', subsData);
-
-        // Find active subscription
-        const userSub = Array.isArray(subsData)
-          ? subsData.find(
-              (sub: Subscription) =>
-                sub.providerId === user.id && (sub.status === 'active' || sub.isActive === true)
-            )
-          : null;
-
-        if (userSub) {
-          console.log('✅ User active subscription:', userSub);
-          setUserSubscription(userSub);
-        } else {
-          console.log('ℹ️ No active subscription found');
-        }
-      }
-    } catch (err) {
-      console.error('❌ Error fetching data:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSubscribe = async (planId: string, planName: string, planPrice: number) => {
-    if (!user || !token) {
-      router.push('/login');
-      return;
-    }
-
-    // Check if user already has active subscription
-    if (userSubscription) {
-      setError('Ya tienes una suscripción activa. Cancélala primero para cambiar de plan.');
-      setTimeout(() => setError(null), 4000);
-      return;
-    }
-
-    setProcessing(true);
-    setError(null);
-
-    try {
-      const backendUrl = 'http://localhost:3000';
-
-      console.log('💳 Creating Stripe checkout session...');
-      console.log('🔍 User data:', {
-        userId: user.id,
-        planId,
-        token: token ? 'exists' : 'missing',
-      });
-
-      const checkoutData = {
-        providerId: user.id,
-        planId: planId,
-      };
-
-      console.log('📤 Sending to backend:', JSON.stringify(checkoutData, null, 2));
-
-      const response = await fetch(`${backendUrl}/subscription/create-checkout-session`, {
+      const res = await fetch(`${backendUrl}/subscription/create-checkout-session`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(checkoutData),
+        body: JSON.stringify({ providerId: user.id }),
       });
 
-      console.log('📥 Response status:', response.status, response.statusText);
-      console.log('📥 Response headers:', Object.fromEntries(response.headers.entries()));
+      if (!res.ok) throw new Error('Error creating checkout session');
 
-      // Intentar parsear la respuesta como JSON primero
-      let responseData;
-      const contentType = response.headers.get('content-type');
+      const data = await res.json();
+      if (!data?.url) throw new Error('No checkout url returned');
 
-      console.log('📋 Content-Type:', contentType);
-
-      try {
-        if (contentType && contentType.includes('application/json')) {
-          responseData = await response.json();
-          console.log('✅ Parsed as JSON:', responseData);
-        } else {
-          responseData = await response.text();
-          console.log('✅ Parsed as TEXT:', responseData);
-        }
-      } catch (parseError) {
-        console.error('❌ Error parsing response:', parseError);
-        throw new Error('Error al procesar la respuesta del servidor');
-      }
-
-      console.log('📦 Response data (final):', responseData);
-
-      if (!response.ok) {
-        console.log('❌ Response is NOT OK');
-        console.log('❌ Status:', response.status);
-        console.log('❌ Status Text:', response.statusText);
-        console.log('❌ Data:', responseData);
-        console.log('❌ Type of data:', typeof responseData);
-
-        console.error('❌ Backend error details:', {
-          status: response.status,
-          statusText: response.statusText,
-          data: responseData,
-          headers: Object.fromEntries(response.headers.entries()),
-        });
-
-        // Intentar extraer mensaje de error específico
-        let errorMessage = 'Error al crear la sesión de pago con Stripe';
-
-        console.log('🔍 Extracting error message from:', responseData);
-
-        if (typeof responseData === 'object' && responseData !== null) {
-          console.log('📝 Is object, checking message field...');
-          const backendMessage = responseData.message || responseData.error;
-
-          // Si es un error genérico del backend, dar más contexto
-          if (backendMessage === 'Internal server error') {
-            errorMessage =
-              'Error en el servidor. Por favor contacta al administrador. Detalles: Verifica que Stripe esté configurado correctamente y que el plan exista.';
-            console.error('🚨 Backend error genérico. Posibles causas:', {
-              causa1: 'Stripe API keys no configuradas en el backend',
-              causa2: 'Plan ID no existe en la base de datos',
-              causa3: 'Provider ID no existe o es inválido',
-              causa4: 'Error de conexión con Stripe',
-              providerId: checkoutData.providerId,
-              planId: checkoutData.planId,
-            });
-          } else {
-            errorMessage = backendMessage || JSON.stringify(responseData);
-          }
-          console.log('📝 Extracted message:', errorMessage);
-        } else if (typeof responseData === 'string') {
-          console.log('📝 Is string, trying to parse...');
-          try {
-            const parsed = JSON.parse(responseData);
-            errorMessage = parsed.message || parsed.error || errorMessage;
-            console.log('📝 Parsed and extracted:', errorMessage);
-          } catch {
-            errorMessage = responseData;
-            console.log('📝 Could not parse, using as is:', errorMessage);
-          }
-        }
-
-        console.log('🚨 Final error message:', errorMessage);
-        throw new Error(errorMessage);
-      }
-
-      // Verificar que tenemos la URL
-      const { url } = typeof responseData === 'object' ? responseData : { url: null };
-
-      if (!url) {
-        console.error('❌ No URL in response:', responseData);
-        throw new Error('No se recibió URL de checkout de Stripe');
-      }
-
-      console.log('✅ Stripe Checkout URL received:', url);
-      console.log('🔄 Redirecting to Stripe...');
-
-      // Redirect to Stripe Checkout
-      window.location.href = url;
+      window.location.href = data.url;
     } catch (err) {
-      console.log('❌ CATCH BLOCK REACHED');
-      console.log('❌ Error type:', typeof err);
-      console.log('❌ Error:', err);
-      console.log('❌ Error message:', err instanceof Error ? err.message : 'Not an Error object');
-      console.log('❌ Error stack:', err instanceof Error ? err.stack : 'No stack');
-
-      console.error('❌ Error completo:', {
-        error: err,
-        message: err instanceof Error ? err.message : 'Unknown error',
-        stack: err instanceof Error ? err.stack : undefined,
-        stringified: JSON.stringify(err, Object.getOwnPropertyNames(err)),
-      });
-
-      setError(err instanceof Error ? err.message : 'Error inesperado al procesar la suscripción');
+      console.error('❌ Checkout error:', err);
+      alert('No se pudo iniciar el pago. Intenta de nuevo.');
     } finally {
-      setProcessing(false);
+      setLoadingCheckout(false);
     }
   };
 
-  const handleCancelSubscription = async () => {
-    if (!userSubscription || !token) return;
-
-    const confirmed = confirm('¿Estás seguro de que quieres cancelar tu suscripción?');
-    if (!confirmed) return;
-
-    setProcessing(true);
-    setError(null);
-
-    try {
-      const backendUrl = 'http://localhost:3000';
-
-      const response = await fetch(`${backendUrl}/subscription/${userSubscription.id}`, {
-        method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          status: 'cancelled',
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Error al cancelar la suscripción');
-      }
-
-      console.log('✅ Subscription cancelled');
-      setUserSubscription(null);
-      showSuccessMessage('Suscripción cancelada exitosamente');
-
-      // Reload data
-      await fetchData();
-    } catch (err) {
-      console.error('❌ Error cancelling subscription:', err);
-      setError(err instanceof Error ? err.message : 'Error al cancelar la suscripción');
-    } finally {
-      setProcessing(false);
-    }
-  };
-
-  const showSuccessMessage = (message: string) => {
-    const successMsg = document.createElement('div');
-    successMsg.className =
-      'fixed top-4 right-4 bg-emerald-500 text-white px-6 py-3 rounded-xl shadow-lg z-50 flex items-center gap-2';
-    successMsg.innerHTML = `<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg> <span>${message}</span>`;
-    document.body.appendChild(successMsg);
-    setTimeout(() => successMsg.remove(), 4000);
-  };
-
-  // Solo mostrar plan Premium
-  const premiumPlan = plans.find((p) => p.price > 0 || p.name.toLowerCase().includes('premium'));
-
-  const hasActiveSubscription = !!(
-    userSubscription &&
-    (userSubscription.status === 'active' || userSubscription.isActive === true)
-  );
-
-  const activePlan = hasActiveSubscription
-    ? plans.find((p) => p.id === userSubscription?.planId)
-    : null;
-
-  const daysRemaining = userSubscription?.endDate
-    ? Math.max(
-        0,
-        Math.ceil(
-          (new Date(userSubscription.endDate).getTime() - new Date().getTime()) /
-            (1000 * 60 * 60 * 24)
-        )
-      )
-    : 0;
-
-  if (loading) {
+  if (plansLoading || checking) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-cyan-50 to-emerald-50 flex items-center justify-center pt-24">
         <div className="text-center">
@@ -359,6 +235,164 @@ export default function SubscriptionPage() {
     );
   }
 
+  // ============================================
+  // 🎉 VISTA PREMIUM - Usuario ya tiene suscripción activa
+  // ============================================
+  if (hasActiveSub) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-cyan-50 to-emerald-50 py-12 px-4 pt-24">
+        <div className="max-w-5xl mx-auto">
+          {/* Background Effects */}
+          <div className="fixed inset-0 overflow-hidden pointer-events-none">
+            <div className="absolute top-0 right-0 w-96 h-96 bg-blue-300/20 rounded-full blur-3xl animate-pulse"></div>
+            <div
+              className="absolute bottom-0 left-0 w-96 h-96 bg-emerald-300/20 rounded-full blur-3xl animate-pulse"
+              style={{ animationDelay: '1s' }}
+            ></div>
+          </div>
+
+          {/* Header Premium */}
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-center mb-12 relative z-10"
+          >
+            <motion.div
+              animate={{ rotate: [0, 10, -10, 0] }}
+              transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
+              className="inline-flex mb-6"
+            >
+              <div className="bg-gradient-to-r from-yellow-400 via-orange-500 to-pink-500 p-5 rounded-3xl shadow-2xl">
+                <Crown className="w-16 h-16 text-white" />
+              </div>
+            </motion.div>
+
+            <h1 className="text-6xl font-bold bg-gradient-to-r from-yellow-500 via-orange-500 to-pink-500 bg-clip-text text-transparent mb-4">
+              ¡Eres Usuario Premium!
+            </h1>
+            <p className="text-2xl text-gray-600 max-w-2xl mx-auto">
+              Disfruta de todos los beneficios exclusivos de tu suscripción
+            </p>
+
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.3 }}
+              className="mt-6 inline-flex items-center gap-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white px-8 py-4 rounded-2xl shadow-xl"
+            >
+              <CheckCircle className="w-6 h-6" />
+              <span className="text-lg font-bold">
+                Suscripción Activa desde{' '}
+                {new Date(mySub?.startDate || '').toLocaleDateString('es-ES')}
+              </span>
+            </motion.div>
+          </motion.div>
+
+          {/* Benefits Grid */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+            className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12 relative z-10"
+          >
+            {[
+              {
+                icon: Eye,
+                title: 'Visualizaciones Ilimitadas',
+                description: 'Tu perfil se muestra sin límites',
+                gradient: 'from-blue-500 to-cyan-500',
+              },
+              {
+                icon: Crown,
+                title: 'Badge Premium',
+                description: 'Destaca con tu insignia dorada',
+                gradient: 'from-yellow-500 to-orange-500',
+              },
+              {
+                icon: TrendingUp,
+                title: 'Destacado en Búsquedas',
+                description: 'Aparece primero en los resultados',
+                gradient: 'from-purple-500 to-pink-500',
+              },
+              {
+                icon: Target,
+                title: 'Prioridad en Resultados',
+                description: 'Los clientes te encuentran más rápido',
+                gradient: 'from-emerald-500 to-green-500',
+              },
+              {
+                icon: Sparkles,
+                title: 'Estadísticas Avanzadas',
+                description: 'Métricas detalladas de tu negocio',
+                gradient: 'from-indigo-500 to-blue-500',
+              },
+              {
+                icon: Shield,
+                title: 'Soporte 24/7',
+                description: 'Asistencia prioritaria cuando lo necesites',
+                gradient: 'from-red-500 to-pink-500',
+              },
+            ].map((benefit, idx) => (
+              <motion.div
+                key={idx}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5 + idx * 0.1 }}
+                className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-xl p-6 border-2 border-white/50 hover:shadow-2xl transition-all"
+              >
+                <div
+                  className={`w-14 h-14 bg-gradient-to-r ${benefit.gradient} rounded-xl flex items-center justify-center mb-4 shadow-lg`}
+                >
+                  <benefit.icon className="w-7 h-7 text-white" />
+                </div>
+                <h3 className="text-lg font-bold text-gray-900 mb-2">{benefit.title}</h3>
+                <p className="text-gray-600 text-sm">{benefit.description}</p>
+              </motion.div>
+            ))}
+          </motion.div>
+
+          {/* CTA Button */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.8 }}
+            className="text-center relative z-10"
+          >
+            <button
+              onClick={() => router.push('/provider/dashboard')}
+              className="inline-flex items-center gap-3 bg-gradient-to-r from-blue-600 via-cyan-600 to-emerald-600 text-white px-10 py-5 rounded-2xl text-xl font-bold hover:shadow-2xl transition-all hover:scale-105"
+            >
+              Ir al Dashboard
+              <ArrowRight className="w-6 h-6" />
+            </button>
+          </motion.div>
+
+          {/* Footer Info */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 1 }}
+            className="mt-12 text-center relative z-10"
+          >
+            <div className="bg-white/60 backdrop-blur-xl rounded-2xl shadow-lg p-6 border-2 border-white/50 max-w-2xl mx-auto">
+              <p className="text-gray-700 text-sm">
+                <strong>Plan:</strong> {currentPlan?.name || 'Premium'} • <strong>Precio:</strong> $
+                {Number(currentPlan?.price || 0).toFixed(0)}/mes • <strong>Estado:</strong>{' '}
+                <span className="text-green-600 font-bold">Activo</span>
+              </p>
+              <p className="text-gray-500 text-xs mt-2">
+                ¿Necesitas ayuda? Contacta a soporte en soporte@cleengo.com
+              </p>
+            </div>
+          </motion.div>
+        </div>
+      </div>
+    );
+  }
+
+  // ============================================
+  // VISTA NORMAL - Usuario sin suscripción
+  // ============================================
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-cyan-50 to-emerald-50 py-12 px-4 pt-24">
       <div className="max-w-7xl mx-auto">
@@ -370,21 +404,6 @@ export default function SubscriptionPage() {
             style={{ animationDelay: '1s' }}
           ></div>
         </div>
-
-        {/* Error Message */}
-        {error && (
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="relative z-10 bg-red-50 border-2 border-red-200 rounded-2xl p-4 mb-6 flex items-center gap-3 max-w-2xl mx-auto"
-          >
-            <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
-            <span className="text-red-700">{error}</span>
-            <button onClick={() => setError(null)} className="ml-auto">
-              <X className="w-5 h-5 text-red-600" />
-            </button>
-          </motion.div>
-        )}
 
         {/* Header */}
         <motion.div
@@ -408,42 +427,89 @@ export default function SubscriptionPage() {
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
             Elige el plan que mejor se adapte a tus necesidades como proveedor
           </p>
-
-          {hasActiveSubscription && activePlan && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="mt-6"
-            >
-              <div className="inline-flex flex-col gap-2 items-center">
-                <span className="inline-block bg-gradient-to-r from-green-500 to-emerald-600 text-white px-6 py-2 text-base rounded-full shadow-lg">
-                  ✓ Plan {activePlan.name} Activo - {daysRemaining} días restantes
-                </span>
-                <button
-                  onClick={handleCancelSubscription}
-                  disabled={processing}
-                  className="text-sm text-red-600 hover:text-red-700 underline disabled:opacity-50"
-                >
-                  Cancelar suscripción
-                </button>
-              </div>
-            </motion.div>
-          )}
         </motion.div>
 
         {/* Plans Grid */}
-        <div className="max-w-2xl mx-auto mb-12 relative z-10">
-          {/* SOLO PREMIUM PLAN */}
-          {premiumPlan && (
+        <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto mb-12 relative z-10">
+          {/* PLAN ACTUAL */}
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.2 }}
+            className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl hover:shadow-3xl transition-all overflow-hidden flex flex-col border-2 border-gray-200"
+          >
+            <div className="bg-gradient-to-r from-gray-500 via-gray-600 to-gray-700 p-8 text-white relative overflow-hidden">
+              <div className="absolute top-0 right-0 -mt-4 -mr-4 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
+              <div className="relative z-10">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="p-3 bg-white/20 backdrop-blur-sm rounded-xl">
+                    <Shield className="w-8 h-8 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-3xl font-bold">{currentPlan?.name || 'Gratuito'}</h3>
+                    <p className="text-white/90 mt-1">
+                      {currentPlan?.description || 'Plan básico'}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-baseline gap-3">
+                  <span className="text-6xl font-bold">
+                    ${Number(currentPlan?.price || 0).toFixed(0)}
+                  </span>
+                  <div>
+                    <div className="text-white/90 text-xl">MXN/mes</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-8 flex-1 flex flex-col">
+              <div className="space-y-4 mb-8 flex-1">
+                <h4 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  <Star className="w-5 h-5 text-gray-600" />
+                  Tu plan actual incluye:
+                </h4>
+
+                {[
+                  { text: 'Perfil básico', icon: Users },
+                  { text: 'Visibilidad limitada', icon: Eye },
+                  { text: 'Acceso a solicitudes', icon: Target },
+                ].map((feature, idx) => (
+                  <div key={idx} className="flex items-start gap-3">
+                    <div className="p-1 bg-gradient-to-r from-gray-50 to-gray-100 rounded-full">
+                      <Check className="w-5 h-5 text-gray-600" />
+                    </div>
+                    <div className="flex-1 flex items-center gap-2">
+                      <feature.icon className="w-4 h-4 text-gray-600" />
+                      <span className="text-gray-700">{feature.text}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="space-y-3">
+                <div className="bg-gray-50 border-2 border-gray-200 rounded-xl p-4 text-center">
+                  <p className="text-sm font-semibold text-gray-700">Plan Gratuito Activo</p>
+                </div>
+
+                <button
+                  onClick={() => router.push('/provider/dashboard')}
+                  className="w-full text-lg py-4 rounded-xl shadow-lg transition-all font-bold flex items-center justify-center gap-2 bg-gray-700 hover:bg-gray-800 text-white"
+                >
+                  Ir al Dashboard
+                  <ArrowRight className="w-6 h-6" />
+                </button>
+              </div>
+            </div>
+          </motion.div>
+
+          {/* PLAN PREMIUM / UPGRADE */}
+          {upgradePlan && (
             <motion.div
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.3 }}
-              className={`bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl hover:shadow-3xl transition-all overflow-hidden flex flex-col ${
-                hasActiveSubscription && userSubscription?.planId === premiumPlan.id
-                  ? 'ring-4 ring-green-500'
-                  : 'ring-4 ring-blue-500'
-              }`}
+              className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl hover:shadow-3xl transition-all overflow-hidden flex flex-col ring-4 ring-blue-500"
             >
               <div className="absolute top-4 right-4 z-20">
                 <span className="inline-block bg-gradient-to-r from-yellow-500 to-orange-500 text-white px-4 py-2 rounded-full text-sm font-bold shadow-lg">
@@ -459,12 +525,14 @@ export default function SubscriptionPage() {
                       <Crown className="w-8 h-8 text-white" />
                     </div>
                     <div>
-                      <h3 className="text-3xl font-bold">{premiumPlan.name}</h3>
-                      <p className="text-white/90 mt-1">{premiumPlan.description}</p>
+                      <h3 className="text-3xl font-bold">{upgradePlan.name}</h3>
+                      <p className="text-white/90 mt-1">{upgradePlan.description}</p>
                     </div>
                   </div>
                   <div className="flex items-baseline gap-3">
-                    <span className="text-6xl font-bold">${premiumPlan.price}</span>
+                    <span className="text-6xl font-bold">
+                      ${Number(upgradePlan.price).toFixed(0)}
+                    </span>
                     <div>
                       <div className="text-white/90 text-xl">MXN/mes</div>
                     </div>
@@ -476,7 +544,7 @@ export default function SubscriptionPage() {
                 <div className="space-y-4 mb-8 flex-1">
                   <h4 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
                     <Star className="w-5 h-5 text-blue-600" />
-                    Todo lo de Gratuito, más:
+                    Todo lo de {currentPlan?.name || 'Gratuito'}, más:
                   </h4>
 
                   {[
@@ -501,39 +569,24 @@ export default function SubscriptionPage() {
                 </div>
 
                 <button
-                  onClick={() =>
-                    handleSubscribe(premiumPlan.id, premiumPlan.name, premiumPlan.price)
-                  }
-                  disabled={
-                    processing ||
-                    (hasActiveSubscription && userSubscription?.planId === premiumPlan.id)
-                  }
-                  className={`w-full text-lg py-4 rounded-xl shadow-xl transition-all font-bold flex items-center justify-center gap-2 ${
-                    hasActiveSubscription && userSubscription?.planId === premiumPlan.id
-                      ? 'bg-gray-400 cursor-not-allowed text-white'
-                      : 'bg-gradient-to-r from-blue-500 via-cyan-500 to-emerald-500 hover:from-blue-600 hover:via-cyan-600 hover:to-emerald-600 text-white'
-                  } disabled:opacity-50`}
+                  onClick={handleCheckout}
+                  disabled={loadingCheckout}
+                  className="w-full text-lg py-4 rounded-xl shadow-xl transition-all font-bold flex items-center justify-center gap-2 bg-gradient-to-r from-blue-500 via-cyan-500 to-emerald-500 hover:from-blue-600 hover:via-cyan-600 hover:to-emerald-600 text-white disabled:opacity-50"
                 >
-                  {processing ? (
-                    <Loader2 className="w-6 h-6 animate-spin" />
-                  ) : hasActiveSubscription && userSubscription?.planId === premiumPlan.id ? (
+                  {loadingCheckout ? (
                     <>
-                      <Shield className="w-6 h-6" />
-                      Plan Activo
+                      <Loader2 className="w-6 h-6 animate-spin" />
+                      Redirigiendo a Stripe...
                     </>
                   ) : (
                     <>
-                      Obtener Premium
+                      Obtener {upgradePlan.name}
                       <ArrowRight className="w-6 h-6" />
                     </>
                   )}
                 </button>
 
-                {!(hasActiveSubscription && userSubscription?.planId === premiumPlan.id) && (
-                  <p className="text-center text-sm text-gray-500 mt-4">
-                    💳 Pago seguro con Stripe
-                  </p>
-                )}
+                <p className="text-center text-sm text-gray-500 mt-4">💳 Pago seguro con Stripe</p>
               </div>
             </motion.div>
           )}
