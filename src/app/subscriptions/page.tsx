@@ -71,7 +71,7 @@ export default function SubscriptionPage() {
 
     setLoading(true);
     try {
-      const backendUrl = 'http://localhost:3000';
+      const backendUrl = process.env.VITE_BACKEND_URL;
 
       // Fetch plans
       const plansResponse = await fetch(`${backendUrl}/plan`, {

@@ -28,7 +28,7 @@ function SubscriptionSuccessContent() {
 
   const verifySubscription = async (sessionId: string) => {
     try {
-      const backendUrl = 'http://localhost:3000';
+      const backendUrl = process.env.VITE_BACKEND_URL;
 
       // Verificar el estado de la sesión de Stripe
       const response = await fetch(
