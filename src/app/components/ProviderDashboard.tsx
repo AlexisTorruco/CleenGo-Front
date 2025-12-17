@@ -1,10 +1,9 @@
-// src/app/components/ProviderDashboard.tsx
-"use client";
+'use client';
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { useAuth } from "../contexts/AuthContext";
-import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useAuth } from '../contexts/AuthContext';
+import { useRouter } from 'next/navigation';
+import { motion } from 'framer-motion';
 import {
   Calendar,
   DollarSign,
@@ -27,14 +26,18 @@ import {
   ShoppingCart,
   MessageCircle,
   FileText,
-} from "lucide-react";
+  Crown,
+  Eye,
+  Target,
+  Sparkles,
+  Users,
+  Shield,
+  ArrowRight,
+} from 'lucide-react';
 
-import { calculateProfileCompleteness } from "../services/providerService";
+import { calculateProfileCompleteness } from '../services/providerService';
 
-// ============================================
-// TIPOS (alineados a tu JSON REAL)
-// ============================================
-type Role = "client" | "provider" | "admin";
+type Role = 'client' | 'provider' | 'admin';
 
 interface UserLite {
   id: string;
@@ -47,11 +50,11 @@ interface UserLite {
 }
 
 type AppointmentStatus =
-  | "pending"
-  | "confirmedProvider"
-  | "completed"
-  | "cancelled"
-  | "rejected"
+  | 'pending'
+  | 'confirmedProvider'
+  | 'completed'
+  | 'cancelled'
+  | 'rejected'
   | string;
 
 interface Appointment {
@@ -102,84 +105,70 @@ interface DashboardStats {
   pendingRequests: number;
 }
 
-type TabKey = "requests" | "jobs" | "purchases";
+type TabKey = 'requests' | 'jobs' | 'purchases';
 
-// ✅ para contar no leídos por cita
 type ChatMessageLite = {
   id: string;
   read: boolean;
   receiver?: { id: string };
 };
 
+type SubscriptionResponse = {
+  id: string;
+  paymentStatus: boolean;
+  isActive: boolean;
+  startDate: string;
+  plan?: {
+    id: string;
+    name: string;
+    price: number;
+  };
+  provider?: {
+    id: string;
+    name?: string;
+    email?: string;
+  };
+};
+
 export default function ProviderDashboard() {
   const { user, token, logout } = useAuth();
   const router = useRouter();
-
   const backendUrl = process.env.VITE_BACKEND_URL;
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
   const [profile, setProfile] = useState<UserProfile | null>(null);
-
-  const [providerAppointments, setProviderAppointments] = useState<
-    Appointment[]
-  >([]);
-  const [clientAppointments, setClientAppointments] = useState<Appointment[]>(
-    []
-  );
-
+  const [providerAppointments, setProviderAppointments] = useState<Appointment[]>([]);
+  const [clientAppointments, setClientAppointments] = useState<Appointment[]>([]);
   const [processingId, setProcessingId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<TabKey>("jobs");
-
-  // ✅ feature extra: completitud perfil (de tu compa)
+  const [activeTab, setActiveTab] = useState<TabKey>('jobs');
   const [profileCompleteness, setProfileCompleteness] = useState(100);
+  const [unreadByAppointment, setUnreadByAppointment] = useState<Record<string, number>>({});
+  const [subscription, setSubscription] = useState<SubscriptionResponse | null>(null);
+  const [checkingSubscription, setCheckingSubscription] = useState(true);
 
-  // ✅ unread por cita
-  const [unreadByAppointment, setUnreadByAppointment] = useState<
-    Record<string, number>
-  >({});
+  const isPremium = subscription?.paymentStatus === true && subscription?.isActive === true;
 
-  const normalizeStatus = (s: unknown) => String(s ?? "").toLowerCase();
+  const normalizeStatus = (s: unknown) => String(s ?? '').toLowerCase();
 
   const statusConfig = {
-    pending: {
-      bg: "bg-yellow-100",
-      text: "text-yellow-700",
-      label: "Pendiente",
-    },
-    confirmedprovider: {
-      bg: "bg-blue-100",
-      text: "text-blue-700",
-      label: "Confirmada",
-    },
-    completed: {
-      bg: "bg-emerald-100",
-      text: "text-emerald-700",
-      label: "Completada",
-    },
-    cancelled: { bg: "bg-red-100", text: "text-red-700", label: "Cancelada" },
-    rejected: { bg: "bg-gray-200", text: "text-gray-700", label: "Rechazada" },
+    pending: { bg: 'bg-yellow-100', text: 'text-yellow-700', label: 'Pendiente' },
+    confirmedprovider: { bg: 'bg-blue-100', text: 'text-blue-700', label: 'Confirmada' },
+    completed: { bg: 'bg-emerald-100', text: 'text-emerald-700', label: 'Completada' },
+    cancelled: { bg: 'bg-red-100', text: 'text-red-700', label: 'Cancelada' },
+    rejected: { bg: 'bg-gray-200', text: 'text-gray-700', label: 'Rechazada' },
   } as const;
 
   const getBadge = (status: AppointmentStatus) => {
     const key = normalizeStatus(status) as keyof typeof statusConfig;
-    return (
-      statusConfig[key] || {
-        bg: "bg-gray-100",
-        text: "text-gray-700",
-        label: String(status),
-      }
-    );
+    return statusConfig[key] || { bg: 'bg-gray-100', text: 'text-gray-700', label: String(status) };
   };
 
-  const isPending = (a: Appointment) =>
-    normalizeStatus(a.status).includes("pending");
+  const isPending = (a: Appointment) => normalizeStatus(a.status).includes('pending');
   const isConfirmed = (a: Appointment) =>
-    normalizeStatus(a.status).includes("confirmedprovider") ||
-    normalizeStatus(a.status).includes("confirmed");
-  const isCompleted = (a: Appointment) =>
-    normalizeStatus(a.status).includes("completed");
+    normalizeStatus(a.status).includes('confirmedprovider') ||
+    normalizeStatus(a.status).includes('confirmed');
+  const isCompleted = (a: Appointment) => normalizeStatus(a.status).includes('completed');
 
   const money = (price?: string | null) => {
     const n = Number(price ?? 0);
@@ -188,20 +177,97 @@ export default function ProviderDashboard() {
 
   const translateDay = (day: string) => {
     const translations: Record<string, string> = {
-      Monday: "Lunes",
-      Tuesday: "Martes",
-      Wednesday: "Miércoles",
-      Thursday: "Jueves",
-      Friday: "Viernes",
-      Saturday: "Sábado",
-      Sunday: "Domingo",
+      Monday: 'Lunes',
+      Tuesday: 'Martes',
+      Wednesday: 'Miércoles',
+      Thursday: 'Jueves',
+      Friday: 'Viernes',
+      Saturday: 'Sábado',
+      Sunday: 'Domingo',
     };
     return translations[day] || day;
   };
 
-  // =========================
-  // FETCH DATA
-  // =========================
+  const fetchSubscription = useCallback(async () => {
+    if (!user?.id || !token) {
+      setCheckingSubscription(false);
+      return;
+    }
+
+    console.log('🔍 Fetching subscription for user:', user.id);
+
+    try {
+      const res = await fetch(`${backendUrl}/subscription/provider/${user.id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        cache: 'no-store',
+      });
+
+      console.log('📡 Response status:', res.status);
+      console.log('📡 Response headers:', res.headers.get('content-type'));
+
+      if (!res.ok) {
+        console.log('❌ Response not ok:', res.status);
+        setSubscription(null);
+        setCheckingSubscription(false);
+        return;
+      }
+
+      const contentType = res.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        console.error('❌ Response is not JSON:', contentType);
+        setSubscription(null);
+        setCheckingSubscription(false);
+        return;
+      }
+
+      const text = await res.text();
+      console.log('📦 Raw response:', text);
+
+      if (!text || text.trim() === '' || text === 'null') {
+        console.log('❌ Empty or null response');
+        setSubscription(null);
+        setCheckingSubscription(false);
+        return;
+      }
+
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch (parseError) {
+        console.error('❌ JSON parse error:', parseError);
+        console.error('❌ Response text was:', text);
+        setSubscription(null);
+        setCheckingSubscription(false);
+        return;
+      }
+
+      console.log('📦 Subscription data:', data);
+
+      if (!data) {
+        console.log('❌ No subscription data');
+        setSubscription(null);
+        setCheckingSubscription(false);
+        return;
+      }
+
+      const isPremiumActive = data.paymentStatus === true && data.isActive === true;
+      console.log('✅ isPremium:', isPremiumActive, {
+        paymentStatus: data.paymentStatus,
+        isActive: data.isActive,
+      });
+
+      setSubscription(data);
+    } catch (err) {
+      console.error('❌ Error fetching subscription:', err);
+      setSubscription(null);
+    } finally {
+      setCheckingSubscription(false);
+    }
+  }, [backendUrl, token, user?.id]);
+
   const fetchData = useCallback(async () => {
     if (!user?.id || !token) return;
 
@@ -209,79 +275,65 @@ export default function ProviderDashboard() {
     setError(null);
 
     try {
-      const backendUrl = process.env.VITE_BACKEND_URL;
+      console.log('📡 Fetching provider data for:', user.id);
 
-      console.log("📡 Fetching provider data for:", user.id);
-
-      // Fetch provider profile
       const profileRes = await fetch(`${backendUrl}/provider/${user.id}`, {
         headers: {
           Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
-        cache: "no-store",
+        cache: 'no-store',
       });
 
       if (!profileRes.ok) {
         if (profileRes.status === 401) {
           logout();
-          router.push("/login");
+          router.push('/login');
           return;
         }
-        throw new Error("Error al cargar el perfil");
+        throw new Error('Error al cargar el perfil');
       }
 
       const profileData = await profileRes.json();
       setProfile(profileData);
 
-      // ✅ completitud (de tu compa) sin romper lo tuyo
       try {
         const completeness = calculateProfileCompleteness(profileData);
-        setProfileCompleteness(
-          typeof completeness === "number" ? completeness : 100
-        );
+        setProfileCompleteness(typeof completeness === 'number' ? completeness : 100);
       } catch {
         setProfileCompleteness(100);
       }
 
-      // Appointments del usuario autenticado
       const appointmentsRes = await fetch(`${backendUrl}/appointments`, {
         headers: {
           Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
-        cache: "no-store",
+        cache: 'no-store',
       });
 
       if (!appointmentsRes.ok) {
         if (appointmentsRes.status === 401) {
           logout();
-          router.push("/login");
+          router.push('/login');
           return;
         }
-        throw new Error("Error al cargar citas");
+        throw new Error('Error al cargar citas');
       }
 
       const data: AppointmentsResponse = await appointmentsRes.json();
 
-      const p = Array.isArray(data?.providerAppointments)
-        ? data.providerAppointments
-        : [];
-      const c = Array.isArray(data?.clientAppointments)
-        ? data.clientAppointments
-        : [];
+      const p = Array.isArray(data?.providerAppointments) ? data.providerAppointments : [];
+      const c = Array.isArray(data?.clientAppointments) ? data.clientAppointments : [];
 
       setProviderAppointments(p);
       setClientAppointments(c);
 
-      // Tab default inteligente (tu lógica)
-      if (p.some((a) => isPending(a))) setActiveTab("requests");
-      else setActiveTab("jobs");
+      if (p.some((a) => isPending(a))) setActiveTab('requests');
+      else setActiveTab('jobs');
     } catch (err) {
-      console.error("❌ Error fetching provider dashboard:", err);
-      setError(
-        err instanceof Error ? err.message : "Error al cargar los datos"
-      );
+      console.error('❌ Error fetching provider dashboard:', err);
+      setError(err instanceof Error ? err.message : 'Error al cargar los datos');
     } finally {
       setLoading(false);
     }
@@ -289,33 +341,32 @@ export default function ProviderDashboard() {
 
   useEffect(() => {
     if (!user || !token) {
-      router.push("/login");
+      router.push('/login');
       return;
     }
 
-    if (user.role !== "provider") {
-      router.push("/dashboard");
+    if (user.role !== 'provider') {
+      router.push('/dashboard');
       return;
     }
 
     fetchData();
+    fetchSubscription();
 
-    const handleFocus = () => fetchData();
-    window.addEventListener("focus", handleFocus);
-    return () => window.removeEventListener("focus", handleFocus);
-  }, [user, token, router, fetchData]);
+    const handleFocus = () => {
+      fetchData();
+      fetchSubscription();
+    };
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [user, token, router, fetchData, fetchSubscription]);
 
-  // =========================
-  // ✅ UNREAD COUNTS POR CITA
-  // =========================
   const refreshUnreadByAppointment = useCallback(async () => {
     if (!token || !user?.id) return;
 
     const allAppointments = [...providerAppointments, ...clientAppointments];
-
-    // solo citas confirmadas (donde normalmente existe chat)
     const ids = allAppointments
-      .filter((a) => normalizeStatus(a.status).includes("confirmed"))
+      .filter((a) => normalizeStatus(a.status).includes('confirmed'))
       .map((a) => a.id);
 
     if (ids.length === 0) {
@@ -328,14 +379,13 @@ export default function ProviderDashboard() {
         ids.map(async (id) => {
           const res = await fetch(`${backendUrl}/chat/messages/${id}`, {
             headers: { Authorization: `Bearer ${token}` },
-            cache: "no-store",
+            cache: 'no-store',
           });
           if (!res.ok) return [id, 0] as const;
 
           const data = (await res.json()) as ChatMessageLite[];
           const count = Array.isArray(data)
-            ? data.filter((m) => m.read === false && m.receiver?.id === user.id)
-                .length
+            ? data.filter((m) => m.read === false && m.receiver?.id === user.id).length
             : 0;
 
           return [id, count] as const;
@@ -344,10 +394,9 @@ export default function ProviderDashboard() {
 
       const next: Record<string, number> = {};
       for (const [id, count] of results) next[id] = count;
-
       setUnreadByAppointment(next);
     } catch (e) {
-      console.warn("unread per appointment error", e);
+      console.warn('unread per appointment error', e);
     }
   }, [backendUrl, clientAppointments, providerAppointments, token, user?.id]);
 
@@ -361,69 +410,49 @@ export default function ProviderDashboard() {
     return () => window.clearInterval(id);
   }, [refreshUnreadByAppointment, token]);
 
-  // =========================
-  // ACTIONS (PUT /appointments/status/:id)
-  // =========================
-  const updateAppointmentStatus = async (
-    appointmentId: string,
-    status: string
-  ) => {
+  const updateAppointmentStatus = async (appointmentId: string, status: string) => {
     if (!token) return;
 
     setProcessingId(appointmentId);
     setError(null);
 
     try {
-      const res = await fetch(
-        `${backendUrl}/appointments/status/${appointmentId}`,
-        {
-          method: "PUT",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ status }),
-        }
-      );
+      const res = await fetch(`${backendUrl}/appointments/status/${appointmentId}`, {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status }),
+      });
 
       if (!res.ok) {
-        const txt = await res.text().catch(() => "");
-        throw new Error(txt || "Error al actualizar la cita");
+        const txt = await res.text().catch(() => '');
+        throw new Error(txt || 'Error al actualizar la cita');
       }
 
       await fetchData();
       await refreshUnreadByAppointment();
     } catch (err) {
-      console.error("❌ Error updating appointment:", err);
-      setError(
-        err instanceof Error ? err.message : "Error al actualizar la cita"
-      );
+      console.error('❌ Error updating appointment:', err);
+      setError(err instanceof Error ? err.message : 'Error al actualizar la cita');
     } finally {
       setProcessingId(null);
     }
   };
 
-  const handleAccept = (id: string) =>
-    updateAppointmentStatus(id, "confirmedProvider");
-  const handleReject = (id: string) => updateAppointmentStatus(id, "rejected");
-  const handleCancel = (id: string) => updateAppointmentStatus(id, "cancelled");
-  const handleComplete = (id: string) =>
-    updateAppointmentStatus(id, "completed");
+  const handleAccept = (id: string) => updateAppointmentStatus(id, 'confirmedProvider');
+  const handleReject = (id: string) => updateAppointmentStatus(id, 'rejected');
+  const handleCancel = (id: string) => updateAppointmentStatus(id, 'cancelled');
+  const handleComplete = (id: string) => updateAppointmentStatus(id, 'completed');
 
-  // =========================
-  // STATS
-  // =========================
   const stats = useMemo<DashboardStats>(() => {
     const pendingRequests = providerAppointments.filter(isPending).length;
     const completedServices = providerAppointments.filter(isCompleted).length;
-    const upcomingServices = providerAppointments.filter((a) =>
-      isConfirmed(a)
-    ).length;
-
+    const upcomingServices = providerAppointments.filter((a) => isConfirmed(a)).length;
     const totalEarned = providerAppointments
       .filter(isCompleted)
       .reduce((sum, a) => sum + money(a.price), 0);
-
     const averageRating = 0;
 
     return {
@@ -435,7 +464,7 @@ export default function ProviderDashboard() {
     };
   }, [providerAppointments]);
 
-  if (loading) {
+  if (loading || checkingSubscription) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-emerald-50 flex items-center justify-center">
         <div className="text-center">
@@ -468,33 +497,90 @@ export default function ProviderDashboard() {
     );
   }
 
-  // =========================
-  // LISTS FOR TABS
-  // =========================
   const pendingList = providerAppointments.filter(isPending);
   const jobsList = providerAppointments.filter((a) => !isPending(a));
   const purchasesList = clientAppointments;
 
-  // =========================
-  // RENDER
-  // =========================
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-cyan-50 to-emerald-50 pt-24 pb-12 px-4">
-      {/* Animated Background Blobs (de tu compa, no rompe nada) */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 right-0 w-96 h-96 bg-blue-300/20 rounded-full blur-3xl animate-pulse"></div>
         <div
           className="absolute bottom-0 left-0 w-96 h-96 bg-emerald-300/20 rounded-full blur-3xl animate-pulse"
-          style={{ animationDelay: "1s" }}
+          style={{ animationDelay: '1s' }}
         ></div>
         <div
           className="absolute top-1/2 left-1/2 w-96 h-96 bg-cyan-300/20 rounded-full blur-3xl animate-pulse"
-          style={{ animationDelay: "2s" }}
+          style={{ animationDelay: '2s' }}
         ></div>
       </div>
 
       <div className="max-w-7xl mx-auto">
-        {/* ALERTA DE PERFIL INCOMPLETO */}
+        {!isPremium && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="relative z-10 bg-gradient-to-r from-yellow-50 via-orange-50 to-pink-50 border-2 border-yellow-200 rounded-3xl p-8 mb-6 shadow-2xl overflow-hidden"
+          >
+            <div className="absolute top-0 right-0 w-64 h-64 bg-yellow-200/30 rounded-full blur-3xl"></div>
+            <div className="absolute bottom-0 left-0 w-64 h-64 bg-orange-200/30 rounded-full blur-3xl"></div>
+
+            <div className="relative z-10 flex flex-col md:flex-row items-center gap-6">
+              <motion.div
+                animate={{ rotate: [0, 10, -10, 0], scale: [1, 1.1, 1] }}
+                transition={{ duration: 3, repeat: Infinity, repeatDelay: 2 }}
+                className="flex-shrink-0"
+              >
+                <div className="p-6 bg-gradient-to-br from-yellow-400 via-orange-500 to-pink-500 rounded-3xl shadow-2xl">
+                  <Crown className="w-16 h-16 text-white" />
+                </div>
+              </motion.div>
+
+              <div className="flex-1 text-center md:text-left">
+                <h2 className="text-4xl font-bold bg-gradient-to-r from-yellow-600 via-orange-600 to-pink-600 bg-clip-text text-transparent mb-3">
+                  ¡Obtén más clientes con Premium!
+                </h2>
+                <p className="text-gray-700 text-lg mb-4">
+                  Destaca entre la competencia y aumenta tus reservas hasta 3x con una suscripción
+                  Premium
+                </p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+                  {[
+                    { icon: Eye, text: 'Visualizaciones ilimitadas' },
+                    { icon: TrendingUp, text: 'Destacado en búsquedas' },
+                    { icon: Crown, text: 'Badge Premium dorado' },
+                    { icon: Target, text: 'Prioridad en resultados' },
+                    { icon: Sparkles, text: 'Estadísticas avanzadas' },
+                    { icon: Shield, text: 'Soporte 24/7' },
+                  ].map((benefit, idx) => (
+                    <div
+                      key={idx}
+                      className="flex items-center gap-2 text-gray-700 bg-white/60 backdrop-blur-sm rounded-xl px-3 py-2"
+                    >
+                      <div className="p-1 bg-gradient-to-r from-yellow-100 to-orange-100 rounded-lg">
+                        <benefit.icon className="w-4 h-4 text-orange-600" />
+                      </div>
+                      <span className="text-sm font-medium">{benefit.text}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => router.push('/subscriptions')}
+                  className="bg-gradient-to-r from-yellow-500 via-orange-500 to-pink-500 hover:from-yellow-600 hover:via-orange-600 hover:to-pink-600 text-white font-bold px-8 py-4 rounded-2xl shadow-xl hover:shadow-2xl transition-all flex items-center gap-3 mx-auto md:mx-0"
+                >
+                  <Crown className="w-6 h-6" />
+                  Ver Planes Premium
+                  <ArrowRight className="w-6 h-6" />
+                </motion.button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
         {profileCompleteness < 100 && (
           <motion.div
             initial={{ opacity: 0, y: -20 }}
@@ -507,29 +593,22 @@ export default function ProviderDashboard() {
               </div>
 
               <div className="flex-1">
-                <h3 className="text-lg font-bold text-amber-900 mb-2">
-                  ⚠️ Perfil Incompleto
-                </h3>
-
+                <h3 className="text-lg font-bold text-amber-900 mb-2">⚠️ Perfil Incompleto</h3>
                 <p className="text-amber-800 mb-4">
-                  Tu perfil está{" "}
-                  <strong>{profileCompleteness}% completo</strong>. Para poder
-                  ser contratado y ofrecer tus servicios, completa tu
-                  información.
+                  Tu perfil está <strong>{profileCompleteness}% completo</strong>. Para poder ser
+                  contratado y ofrecer tus servicios, completa tu información.
                 </p>
 
                 <div className="mb-4">
                   <div className="flex justify-between text-sm text-amber-700 mb-2">
                     <span>Progreso del perfil</span>
-                    <span className="font-semibold">
-                      {profileCompleteness}%
-                    </span>
+                    <span className="font-semibold">{profileCompleteness}%</span>
                   </div>
                   <div className="w-full bg-amber-200 rounded-full h-3 overflow-hidden">
                     <motion.div
                       initial={{ width: 0 }}
                       animate={{ width: `${profileCompleteness}%` }}
-                      transition={{ duration: 1, ease: "easeOut" }}
+                      transition={{ duration: 1, ease: 'easeOut' }}
                       className="bg-gradient-to-r from-amber-500 to-orange-500 h-full rounded-full"
                     />
                   </div>
@@ -556,7 +635,7 @@ export default function ProviderDashboard() {
                 </div>
 
                 <button
-                  onClick={() => router.push("/provider/edit-profile")}
+                  onClick={() => router.push('/provider/edit-profile')}
                   className="w-full sm:w-auto bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold px-6 py-3 rounded-xl shadow-md hover:shadow-lg transition-all"
                 >
                   Completar Perfil Ahora
@@ -566,7 +645,6 @@ export default function ProviderDashboard() {
           </motion.div>
         )}
 
-        {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -593,12 +671,37 @@ export default function ProviderDashboard() {
                 <div className="absolute -bottom-2 -right-2 bg-gradient-to-r from-emerald-500 to-green-500 rounded-full p-2 shadow-lg">
                   <Briefcase className="w-5 h-5 text-white" />
                 </div>
+
+                {isPremium && (
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ delay: 0.3, type: 'spring' }}
+                    className="absolute -top-2 -left-2 bg-gradient-to-r from-yellow-400 via-orange-500 to-pink-500 rounded-full p-2 shadow-xl"
+                  >
+                    <Crown className="w-6 h-6 text-white" />
+                  </motion.div>
+                )}
               </div>
 
               <div className="flex-1 text-center md:text-left">
-                <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 via-cyan-600 to-emerald-600 bg-clip-text text-transparent mb-3">
-                  {profile?.name} {profile?.surname}
-                </h1>
+                <div className="flex items-center justify-center md:justify-start gap-3 mb-3">
+                  <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 via-cyan-600 to-emerald-600 bg-clip-text text-transparent">
+                    {profile?.name} {profile?.surname}
+                  </h1>
+
+                  {isPremium && (
+                    <motion.div
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.4 }}
+                      className="inline-flex items-center gap-2 bg-gradient-to-r from-yellow-400 via-orange-500 to-pink-500 text-white px-4 py-2 rounded-full shadow-lg"
+                    >
+                      <Crown className="w-5 h-5" />
+                      <span className="font-bold text-sm">PREMIUM</span>
+                    </motion.div>
+                  )}
+                </div>
 
                 <div className="flex flex-col md:flex-row gap-3 text-gray-600">
                   <div className="flex items-center gap-2 bg-blue-50/50 px-4 py-2 rounded-lg">
@@ -631,9 +734,7 @@ export default function ProviderDashboard() {
                 <div className="bg-gradient-to-br from-blue-500 via-cyan-500 to-emerald-500 rounded-2xl p-6 text-white text-center shadow-xl">
                   <Award className="w-8 h-8 mx-auto mb-2" />
                   <div className="text-3xl font-bold">
-                    {stats.averageRating > 0
-                      ? stats.averageRating.toFixed(1)
-                      : "N/A"}
+                    {stats.averageRating > 0 ? stats.averageRating.toFixed(1) : 'N/A'}
                   </div>
                   <div className="text-sm opacity-90 flex items-center justify-center gap-1">
                     <Star className="w-4 h-4 fill-white" />
@@ -644,7 +745,7 @@ export default function ProviderDashboard() {
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  onClick={() => router.push("/provider/edit-profile")}
+                  onClick={() => router.push('/provider/edit-profile')}
                   className="flex items-center gap-2 px-4 py-2 bg-white border-2 border-blue-200 text-blue-700 rounded-xl hover:bg-blue-50 transition-all font-semibold"
                 >
                   <Edit className="w-4 h-4" />
@@ -653,15 +754,12 @@ export default function ProviderDashboard() {
               </div>
             </div>
 
-            {/* Availability */}
             {profile?.days && profile.days.length > 0 ? (
               <div className="mt-6 pt-6 border-t border-gray-200">
                 <div className="flex flex-wrap gap-4">
                   <div className="flex items-center gap-2">
                     <Calendar className="w-5 h-5 text-blue-600" />
-                    <span className="font-semibold text-gray-700">
-                      Disponibilidad:
-                    </span>
+                    <span className="font-semibold text-gray-700">Disponibilidad:</span>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {profile.days.map((day) => (
@@ -678,9 +776,7 @@ export default function ProviderDashboard() {
                     <>
                       <div className="flex items-center gap-2 ml-4">
                         <Clock className="w-5 h-5 text-emerald-600" />
-                        <span className="font-semibold text-gray-700">
-                          Horario:
-                        </span>
+                        <span className="font-semibold text-gray-700">Horario:</span>
                       </div>
                       <div className="flex flex-wrap gap-2">
                         {profile.hours.map((hour) => (
@@ -707,41 +803,27 @@ export default function ProviderDashboard() {
               </div>
             )}
 
-            {/* Address */}
-            {(profile?.street ||
-              profile?.city ||
-              profile?.state ||
-              profile?.country) && (
+            {(profile?.street || profile?.city || profile?.state || profile?.country) && (
               <div className="mt-4 pt-4 border-t border-gray-200">
                 <div className="flex items-start gap-3 bg-purple-50/50 rounded-xl p-5 border border-purple-100">
                   <MapPin className="w-6 h-6 text-purple-600 flex-shrink-0 mt-1" />
                   <div className="flex-1">
-                    <h4 className="font-bold text-purple-900 mb-3 text-lg">
-                      Dirección
-                    </h4>
+                    <h4 className="font-bold text-purple-900 mb-3 text-lg">Dirección</h4>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
                       {profile.street && (
                         <div>
-                          <span className="font-semibold text-gray-700">
-                            Calle:
-                          </span>{" "}
-                          <span className="text-gray-600">
-                            {profile.street}
-                          </span>
+                          <span className="font-semibold text-gray-700">Calle:</span>{' '}
+                          <span className="text-gray-600">{profile.street}</span>
                         </div>
                       )}
                       {profile.exteriorNumber && (
                         <div>
-                          <span className="font-semibold text-gray-700">
-                            Número:
-                          </span>{" "}
-                          <span className="text-gray-600">
-                            {profile.exteriorNumber}
-                          </span>
+                          <span className="font-semibold text-gray-700">Número:</span>{' '}
+                          <span className="text-gray-600">{profile.exteriorNumber}</span>
                           {profile.interiorNumber && (
                             <span className="text-gray-600">
-                              {" "}
+                              {' '}
                               - Depto/Piso {profile.interiorNumber}
                             </span>
                           )}
@@ -749,109 +831,40 @@ export default function ProviderDashboard() {
                       )}
                       {profile.neighborhood && (
                         <div>
-                          <span className="font-semibold text-gray-700">
-                            Barrio:
-                          </span>{" "}
-                          <span className="text-gray-600">
-                            {profile.neighborhood}
-                          </span>
+                          <span className="font-semibold text-gray-700">Barrio:</span>{' '}
+                          <span className="text-gray-600">{profile.neighborhood}</span>
                         </div>
                       )}
                       {profile.city && (
                         <div>
-                          <span className="font-semibold text-gray-700">
-                            Ciudad:
-                          </span>{" "}
+                          <span className="font-semibold text-gray-700">Ciudad:</span>{' '}
                           <span className="text-gray-600">{profile.city}</span>
                         </div>
                       )}
                       {profile.state && (
                         <div>
-                          <span className="font-semibold text-gray-700">
-                            Estado:
-                          </span>{" "}
+                          <span className="font-semibold text-gray-700">Estado:</span>{' '}
                           <span className="text-gray-600">{profile.state}</span>
                         </div>
                       )}
                       {profile.postalCode && (
                         <div>
-                          <span className="font-semibold text-gray-700">
-                            CP:
-                          </span>{" "}
-                          <span className="text-gray-600">
-                            {profile.postalCode}
-                          </span>
+                          <span className="font-semibold text-gray-700">CP:</span>{' '}
+                          <span className="text-gray-600">{profile.postalCode}</span>
                         </div>
                       )}
                       {profile.country && (
                         <div>
-                          <span className="font-semibold text-gray-700">
-                            País:
-                          </span>{" "}
-                          <span className="text-gray-600">
-                            {profile.country}
-                          </span>
+                          <span className="font-semibold text-gray-700">País:</span>{' '}
+                          <span className="text-gray-600">{profile.country}</span>
                         </div>
                       )}
                     </div>
 
                     {profile.fullAddress && (
                       <div className="mt-3 pt-3 border-t border-purple-100">
-                        <span className="font-semibold text-gray-700">
-                          Dirección completa:
-                        </span>
-                        <p className="text-gray-600 mt-1">
-                          {profile.fullAddress}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Address Section */}
-            {profile?.address && (
-              <div className="mt-6 pt-6 border-t border-gray-200">
-                <div className="flex items-start gap-3 text-gray-600 text-sm bg-purple-50/50 rounded-xl p-4 border border-purple-100">
-                  <MapPin className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
-                  <div className="flex flex-col gap-2 text-left">
-                    <div>
-                      <span className="font-semibold text-gray-700">
-                        Dirección:{" "}
-                      </span>
-                      <span>{profile.address}</span>
-                    </div>
-                    {profile.city && (
-                      <div>
-                        <span className="font-semibold text-gray-700">
-                          Ciudad:{" "}
-                        </span>
-                        <span>{profile.city}</span>
-                      </div>
-                    )}
-                    {profile.state && (
-                      <div>
-                        <span className="font-semibold text-gray-700">
-                          Estado:{" "}
-                        </span>
-                        <span>{profile.state}</span>
-                      </div>
-                    )}
-                    {profile.country && (
-                      <div>
-                        <span className="font-semibold text-gray-700">
-                          País:{" "}
-                        </span>
-                        <span>{profile.country}</span>
-                      </div>
-                    )}
-                    {profile.postalCode && (
-                      <div>
-                        <span className="font-semibold text-gray-700">
-                          Código Postal:{" "}
-                        </span>
-                        <span>{profile.postalCode}</span>
+                        <span className="font-semibold text-gray-700">Dirección completa:</span>
+                        <p className="text-gray-600 mt-1">{profile.fullAddress}</p>
                       </div>
                     )}
                   </div>
@@ -861,7 +874,6 @@ export default function ProviderDashboard() {
           </div>
         </motion.div>
 
-        {/* Stats */}
         <div className="relative z-10 grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <StatCard
             title="Solicitudes Pendientes"
@@ -894,26 +906,25 @@ export default function ProviderDashboard() {
           />
         </div>
 
-        {/* Tabs (tu implementación) */}
         <div className="relative z-10 bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl border-2 border-white/50 p-4 mb-8">
           <div className="grid grid-cols-3 gap-3">
             <TabButton
-              active={activeTab === "requests"}
-              onClick={() => setActiveTab("requests")}
+              active={activeTab === 'requests'}
+              onClick={() => setActiveTab('requests')}
               label="Solicitudes"
               icon={<Bell className="w-5 h-5" />}
               count={pendingList.length}
             />
             <TabButton
-              active={activeTab === "jobs"}
-              onClick={() => setActiveTab("jobs")}
+              active={activeTab === 'jobs'}
+              onClick={() => setActiveTab('jobs')}
               label="Mis trabajos"
               icon={<Briefcase className="w-5 h-5" />}
               count={jobsList.length}
             />
             <TabButton
-              active={activeTab === "purchases"}
-              onClick={() => setActiveTab("purchases")}
+              active={activeTab === 'purchases'}
+              onClick={() => setActiveTab('purchases')}
               label="Mis compras"
               icon={<ShoppingCart className="w-5 h-5" />}
               count={purchasesList.length}
@@ -921,8 +932,7 @@ export default function ProviderDashboard() {
           </div>
         </div>
 
-        {/* Content */}
-        {activeTab === "jobs" && (
+        {activeTab === 'jobs' && (
           <SectionCard
             title="Mis trabajos"
             subtitle="Citas donde tú eres el proveedor"
@@ -939,10 +949,9 @@ export default function ProviderDashboard() {
             ) : (
               <div className="space-y-4">
                 {jobsList.map((a) => {
-                  const clientName = `${a.clientId?.name ?? "Cliente"} ${
-                    a.clientId?.surname ?? ""
+                  const clientName = `${a.clientId?.name ?? 'Cliente'} ${
+                    a.clientId?.surname ?? ''
                   }`.trim();
-
                   const badge = getBadge(a.status);
                   const busy = processingId === a.id;
                   const unread = unreadByAppointment[a.id] ?? 0;
@@ -961,9 +970,7 @@ export default function ProviderDashboard() {
                             >
                               {badge.label}
                             </span>
-                            <div className="font-bold text-gray-900">
-                              {clientName}
-                            </div>
+                            <div className="font-bold text-gray-900">{clientName}</div>
                           </div>
 
                           <div className="flex items-center gap-2 text-gray-700 mb-2">
@@ -984,16 +991,14 @@ export default function ProviderDashboard() {
                         <div className="flex items-center gap-3">
                           {isConfirmed(a) && (
                             <button
-                              onClick={() =>
-                                router.push(`/client/chat/${a.id}`)
-                              }
+                              onClick={() => router.push(`/client/chat/${a.id}`)}
                               className="relative bg-[#0A65FF] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:opacity-90 flex items-center gap-2"
                             >
                               <MessageCircle className="w-4 h-4" />
                               Chat
                               {unread > 0 && (
                                 <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[11px] rounded-full min-w-[18px] h-[18px] px-1 flex items-center justify-center font-bold">
-                                  {unread > 99 ? "99+" : unread}
+                                  {unread > 99 ? '99+' : unread}
                                 </span>
                               )}
                             </button>
@@ -1033,9 +1038,7 @@ export default function ProviderDashboard() {
                             <div className="text-3xl font-bold text-blue-700">
                               ${money(a.price).toLocaleString()}
                             </div>
-                            <div className="text-sm text-blue-600 font-medium">
-                              MXN
-                            </div>
+                            <div className="text-sm text-blue-600 font-medium">MXN</div>
                           </div>
                         </div>
                       </div>
@@ -1047,7 +1050,7 @@ export default function ProviderDashboard() {
           </SectionCard>
         )}
 
-        {activeTab === "requests" && (
+        {activeTab === 'requests' && (
           <SectionCard
             title="Solicitudes pendientes"
             subtitle="Citas pendientes que requieren tu respuesta"
@@ -1064,10 +1067,9 @@ export default function ProviderDashboard() {
             ) : (
               <div className="space-y-4">
                 {pendingList.map((a) => {
-                  const clientName = `${a.clientId?.name ?? "Cliente"} ${
-                    a.clientId?.surname ?? ""
+                  const clientName = `${a.clientId?.name ?? 'Cliente'} ${
+                    a.clientId?.surname ?? ''
                   }`.trim();
-
                   const badge = getBadge(a.status);
                   const busy = processingId === a.id;
 
@@ -1085,9 +1087,7 @@ export default function ProviderDashboard() {
                             >
                               {badge.label}
                             </span>
-                            <div className="font-bold text-gray-900">
-                              {clientName}
-                            </div>
+                            <div className="font-bold text-gray-900">{clientName}</div>
                           </div>
 
                           <div className="flex items-center gap-2 text-gray-700 mb-2">
@@ -1136,9 +1136,7 @@ export default function ProviderDashboard() {
                             <div className="text-3xl font-bold text-blue-700">
                               ${money(a.price).toLocaleString()}
                             </div>
-                            <div className="text-sm text-blue-600 font-medium">
-                              MXN
-                            </div>
+                            <div className="text-sm text-blue-600 font-medium">MXN</div>
                           </div>
                         </div>
                       </div>
@@ -1150,7 +1148,7 @@ export default function ProviderDashboard() {
           </SectionCard>
         )}
 
-        {activeTab === "purchases" && (
+        {activeTab === 'purchases' && (
           <SectionCard
             title="Mis compras"
             subtitle="Citas donde tú apareces como cliente"
@@ -1167,10 +1165,9 @@ export default function ProviderDashboard() {
             ) : (
               <div className="space-y-4">
                 {purchasesList.map((a) => {
-                  const providerName = `${a.providerId?.name ?? "Proveedor"} ${
-                    a.providerId?.surname ?? ""
+                  const providerName = `${a.providerId?.name ?? 'Proveedor'} ${
+                    a.providerId?.surname ?? ''
                   }`.trim();
-
                   const badge = getBadge(a.status);
                   const unread = unreadByAppointment[a.id] ?? 0;
 
@@ -1188,9 +1185,7 @@ export default function ProviderDashboard() {
                             >
                               {badge.label}
                             </span>
-                            <div className="font-bold text-gray-900">
-                              {providerName}
-                            </div>
+                            <div className="font-bold text-gray-900">{providerName}</div>
                           </div>
 
                           <div className="flex items-center gap-2 text-gray-700 mb-2">
@@ -1209,24 +1204,22 @@ export default function ProviderDashboard() {
                         </div>
 
                         <div className="flex items-center gap-3">
-                          {normalizeStatus(a.status).includes("confirmed") && (
+                          {normalizeStatus(a.status).includes('confirmed') && (
                             <button
-                              onClick={() =>
-                                router.push(`/client/chat/${a.id}`)
-                              }
+                              onClick={() => router.push(`/client/chat/${a.id}`)}
                               className="relative bg-[#0A65FF] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:opacity-90 flex items-center gap-2"
                             >
                               <MessageCircle className="w-4 h-4" />
                               Chat
                               {unread > 0 && (
                                 <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[11px] rounded-full min-w-[18px] h-[18px] px-1 flex items-center justify-center font-bold">
-                                  {unread > 99 ? "99+" : unread}
+                                  {unread > 99 ? '99+' : unread}
                                 </span>
                               )}
                             </button>
                           )}
 
-                          {!normalizeStatus(a.status).includes("completed") && (
+                          {!normalizeStatus(a.status).includes('completed') && (
                             <button
                               onClick={() => handleCancel(a.id)}
                               className="bg-red-600 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:opacity-90 flex items-center gap-2"
@@ -1240,9 +1233,7 @@ export default function ProviderDashboard() {
                             <div className="text-3xl font-bold text-blue-700">
                               ${money(a.price).toLocaleString()}
                             </div>
-                            <div className="text-sm text-blue-600 font-medium">
-                              MXN
-                            </div>
+                            <div className="text-sm text-blue-600 font-medium">MXN</div>
                           </div>
                         </div>
                       </div>
@@ -1258,9 +1249,6 @@ export default function ProviderDashboard() {
   );
 }
 
-// ============================================
-// UI HELPERS
-// ============================================
 function TabButton({
   active,
   onClick,
@@ -1279,17 +1267,15 @@ function TabButton({
       onClick={onClick}
       className={`flex items-center justify-center gap-3 px-4 py-3 rounded-2xl font-semibold transition-all border ${
         active
-          ? "bg-gradient-to-r from-blue-600 to-cyan-600 text-white border-transparent shadow-lg"
-          : "bg-white/70 text-gray-700 border-white/60 hover:bg-white"
+          ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white border-transparent shadow-lg'
+          : 'bg-white/70 text-gray-700 border-white/60 hover:bg-white'
       }`}
     >
-      <span className={`${active ? "text-white" : "text-gray-600"}`}>
-        {icon}
-      </span>
+      <span className={`${active ? 'text-white' : 'text-gray-600'}`}>{icon}</span>
       <span className="hidden sm:inline">{label}</span>
       <span
         className={`text-xs font-bold px-2 py-1 rounded-full ${
-          active ? "bg-white/20 text-white" : "bg-blue-50 text-blue-700"
+          active ? 'bg-white/20 text-white' : 'bg-blue-50 text-blue-700'
         }`}
       >
         {count ?? 0}
@@ -1322,9 +1308,7 @@ function SectionCard({
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-3xl font-bold flex items-center gap-3">
-            <div className={`p-3 bg-gradient-to-r ${iconBg} rounded-xl`}>
-              {icon}
-            </div>
+            <div className={`p-3 bg-gradient-to-r ${iconBg} rounded-xl`}>{icon}</div>
             <span className="bg-gradient-to-r from-blue-600 via-cyan-600 to-emerald-600 bg-clip-text text-transparent">
               {title}
             </span>
@@ -1390,13 +1374,9 @@ function StatCard({
       <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity bg-gradient-to-br from-white/10 to-white/0"></div>
       <div className="relative z-10">
         <div className="flex items-center justify-between mb-4">
-          <div
-            className={`p-3 bg-gradient-to-br ${gradient} rounded-xl shadow-lg`}
-          >
-            {icon}
-          </div>
+          <div className={`p-3 bg-gradient-to-br ${gradient} rounded-xl shadow-lg`}>{icon}</div>
           {rightIcon ?? null}
-          {typeof badge === "number" && badge > 0 ? (
+          {typeof badge === 'number' && badge > 0 ? (
             <span className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">
               {badge}
             </span>
