@@ -9,7 +9,7 @@ import { CheckCircle, Loader2, XCircle, ArrowRight } from 'lucide-react';
 function SubscriptionSuccessContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { token } = useAuth();
+  const { token, user } = useAuth();
 
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [message, setMessage] = useState('Verificando tu suscripción...');
@@ -45,12 +45,32 @@ function SubscriptionSuccessContent() {
         const data = await response.json();
         console.log('✅ Subscription verified:', data);
 
+        // IMPORTANTE: Activar manualmente el premium (porque el webhook puede no funcionar en desarrollo)
+        if (user?.id) {
+          console.log('🔧 Activando premium manualmente para:', user.id);
+          const activateResponse = await fetch(
+            `${backendUrl}/subscription/activate-premium/${user.id}`,
+            {
+              method: 'POST',
+              headers: {
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'application/json',
+              },
+            }
+          );
+
+          if (activateResponse.ok) {
+            const activateData = await activateResponse.json();
+            console.log('✅ Premium activado:', activateData);
+          }
+        }
+
         setStatus('success');
         setMessage('¡Tu suscripción se ha activado exitosamente!');
 
-        // Redirigir al dashboard después de 3 segundos
+        // Redirigir al dashboard del proveedor después de 3 segundos con parámetro de refresh
         setTimeout(() => {
-          router.push('/dashboard');
+          router.push('/provider/dashboard?refresh=premium');
         }, 3000);
       } else {
         throw new Error('Error al verificar la suscripción');
