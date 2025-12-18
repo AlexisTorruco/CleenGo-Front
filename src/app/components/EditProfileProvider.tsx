@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useAuth } from '../contexts/AuthContext';
-import { useRouter } from 'next/navigation';
-import { motion } from 'framer-motion';
+import { useState, useEffect } from "react";
+import { useAuth } from "../contexts/AuthContext";
+import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
 import {
   User,
   Mail,
@@ -22,7 +22,7 @@ import {
   CalendarDays,
   MapPin,
   Home,
-} from 'lucide-react';
+} from "lucide-react";
 
 // ============================================
 // INTERFACES
@@ -37,6 +37,7 @@ interface ProviderProfileForm {
   about: string;
   days: string[];
   hours: string[];
+
   // Campos de dirección
   street: string;
   exteriorNumber: string;
@@ -45,26 +46,52 @@ interface ProviderProfileForm {
   city: string;
   state: string;
   postalCode: string;
+
+  // ✅ NUEVO: servicios seleccionados (IDs)
+  services: string[];
 }
 
-const DAYS_OF_WEEK = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+interface CategoryDto {
+  id: string;
+  name: string;
+  isActive: boolean;
+}
+
+interface ServiceDto {
+  id: string;
+  name: string;
+  unitaryPrice: string | number;
+  isActive: boolean;
+  category?: CategoryDto;
+}
+
+const DAYS_OF_WEEK = [
+  "Lunes",
+  "Martes",
+  "Miércoles",
+  "Jueves",
+  "Viernes",
+  "Sábado",
+  "Domingo",
+];
+
 const DAYS_IN_SPANISH: Record<string, string> = {
-  Lunes: 'Lunes',
-  Martes: 'Martes',
-  Miércoles: 'Miércoles',
-  Jueves: 'Jueves',
-  Viernes: 'Viernes',
-  Sábado: 'Sábado',
-  Domingo: 'Domingo',
+  Lunes: "Lunes",
+  Martes: "Martes",
+  Miércoles: "Miércoles",
+  Jueves: "Jueves",
+  Viernes: "Viernes",
+  Sábado: "Sábado",
+  Domingo: "Domingo",
 };
 
 const TIME_SLOTS = [
-  '06:00-09:00',
-  '09:00-12:00',
-  '12:00-15:00',
-  '15:00-18:00',
-  '18:00-21:00',
-  '21:00-00:00',
+  "06:00-09:00",
+  "09:00-12:00",
+  "12:00-15:00",
+  "15:00-18:00",
+  "18:00-21:00",
+  "21:00-00:00",
 ];
 
 // ============================================
@@ -78,7 +105,7 @@ export default function EditProfileProvider() {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [deleteInput, setDeleteInput] = useState('');
+  const [deleteInput, setDeleteInput] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
@@ -87,38 +114,73 @@ export default function EditProfileProvider() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
+  // ✅ NUEVO: catálogo de servicios
+  const [allServices, setAllServices] = useState<ServiceDto[]>([]);
+
   const [formData, setFormData] = useState<ProviderProfileForm>({
-    name: '',
-    surname: '',
-    email: '',
-    phone: '',
-    birthDate: '',
-    profileImgUrl: '',
-    about: '',
+    name: "",
+    surname: "",
+    email: "",
+    phone: "",
+    birthDate: "",
+    profileImgUrl: "",
+    about: "",
     days: [],
     hours: [],
-    street: '',
-    exteriorNumber: '',
-    interiorNumber: '',
-    neighborhood: '',
-    city: '',
-    state: '',
-    postalCode: '',
+    street: "",
+    exteriorNumber: "",
+    interiorNumber: "",
+    neighborhood: "",
+    city: "",
+    state: "",
+    postalCode: "",
+    services: [], // ✅ nuevo
   });
 
   useEffect(() => {
     if (!user || !token) {
-      router.push('/login');
+      router.push("/login");
       return;
     }
 
-    if (user.role !== 'provider') {
-      router.push('/dashboard');
+    if (user.role !== "provider") {
+      router.push("/dashboard");
       return;
     }
 
     fetchProfile();
+    fetchServices();
   }, [user, token, router]);
+
+  const getBackendUrl = () =>
+    process.env.VITE_BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL;
+
+  // =========================
+  // ✅ Cargar catálogo servicios
+  // =========================
+  const fetchServices = async () => {
+    try {
+      const backendUrl = getBackendUrl();
+      const res = await fetch(`${backendUrl}/services`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!res.ok) {
+        throw new Error("Error al cargar servicios");
+      }
+
+      const data = await res.json();
+      setAllServices(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error("Error fetching services:", err);
+      setError(
+        err instanceof Error ? err.message : "Error al cargar servicios"
+      );
+    }
+  };
 
   const fetchProfile = async () => {
     if (!user || !token) return;
@@ -127,52 +189,61 @@ export default function EditProfileProvider() {
     setError(null);
 
     try {
-      const backendUrl = process.env.VITE_BACKEND_URL;
+      const backendUrl = getBackendUrl();
       const response = await fetch(`${backendUrl}/provider/${user.id}`, {
         headers: {
           Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
       });
 
       if (!response.ok) {
         if (response.status === 401) {
           logout();
-          router.push('/login');
+          router.push("/login");
           return;
         }
-        throw new Error('Error al cargar el perfil');
+        throw new Error("Error al cargar el perfil");
       }
 
       const data = await response.json();
 
       setFormData({
-        name: data.name || '',
-        surname: data.surname || '',
-        email: user.email || '',
-        phone: data.phone || '',
-        birthDate: data.birthDate || '',
-        profileImgUrl: data.profileImgUrl || '',
-        about: data.about || '',
+        name: data.name || "",
+        surname: data.surname || "",
+        email: user.email || "",
+        phone: data.phone || "",
+        birthDate: data.birthDate || "",
+        profileImgUrl: data.profileImgUrl || "",
+        about: data.about || "",
         days: data.days || [],
         hours: data.hours || [],
-        street: data.street || '',
-        exteriorNumber: data.exteriorNumber || '',
-        interiorNumber: data.interiorNumber || '',
-        neighborhood: data.neighborhood || '',
-        city: data.city || '',
-        state: data.state || '',
-        postalCode: data.postalCode || '',
+        street: data.street || "",
+        exteriorNumber: data.exteriorNumber || "",
+        interiorNumber: data.interiorNumber || "",
+        neighborhood: data.neighborhood || "",
+        city: data.city || "",
+        state: data.state || "",
+        postalCode: data.postalCode || "",
+
+        // ✅ precarga services (objetos => ids)
+        services: Array.isArray(data.services)
+          ? data.services.map((s: any) => s.id)
+          : [],
       });
     } catch (err) {
-      console.error('Error fetching profile:', err);
-      setError(err instanceof Error ? err.message : 'Error al cargar los datos');
+      console.error("Error fetching profile:", err);
+      setError(
+        err instanceof Error ? err.message : "Error al cargar los datos"
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
@@ -180,7 +251,9 @@ export default function EditProfileProvider() {
   const handleDayToggle = (day: string) => {
     setFormData((prev) => ({
       ...prev,
-      days: prev.days.includes(day) ? prev.days.filter((d) => d !== day) : [...prev.days, day],
+      days: prev.days.includes(day)
+        ? prev.days.filter((d) => d !== day)
+        : [...prev.days, day],
     }));
   };
 
@@ -193,26 +266,40 @@ export default function EditProfileProvider() {
     }));
   };
 
+  // ✅ NUEVO: toggle de servicios (IDs)
+  const handleServiceToggle = (serviceId: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      services: prev.services.includes(serviceId)
+        ? prev.services.filter((id) => id !== serviceId)
+        : [...prev.services, serviceId],
+    }));
+  };
+
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
+    const validTypes = [
+      "image/jpeg",
+      "image/jpg",
+      "image/png",
+      "image/webp",
+      "image/gif",
+    ];
     if (!validTypes.includes(file.type)) {
-      setError('Solo se permiten archivos de imagen (JPG, PNG, WEBP, GIF)');
+      setError("Solo se permiten archivos de imagen (JPG, PNG, WEBP, GIF)");
       return;
     }
 
     const maxSize = 5 * 1024 * 1024;
     if (file.size > maxSize) {
-      setError('La imagen no debe superar los 5MB');
+      setError("La imagen no debe superar los 5MB");
       return;
     }
 
     const reader = new FileReader();
-    reader.onloadend = () => {
-      setImagePreview(reader.result as string);
-    };
+    reader.onloadend = () => setImagePreview(reader.result as string);
     reader.readAsDataURL(file);
 
     setSelectedFile(file);
@@ -226,44 +313,46 @@ export default function EditProfileProvider() {
     setError(null);
 
     try {
-      const backendUrl = process.env.VITE_BACKEND_URL;
+      const backendUrl = getBackendUrl();
       const formDataUpload = new FormData();
-      formDataUpload.append('file', selectedFile);
+      formDataUpload.append("file", selectedFile);
 
-      const response = await fetch(`${backendUrl}/file-upload/avatar/${user.id}`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        body: formDataUpload,
-      });
+      const response = await fetch(
+        `${backendUrl}/file-upload/avatar/${user.id}`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          body: formDataUpload,
+        }
+      );
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => null);
-        throw new Error(errorData?.message || 'Error al subir la imagen');
+        throw new Error(errorData?.message || "Error al subir la imagen");
       }
 
       const data = await response.json();
       const imageUrl = data.url || data.imageUrl || data.avatarUrl;
 
-      if (!imageUrl) {
-        throw new Error('El servidor no devolvió una URL de imagen');
-      }
+      if (!imageUrl)
+        throw new Error("El servidor no devolvió una URL de imagen");
 
       setFormData((prev) => ({ ...prev, profileImgUrl: imageUrl }));
       setImagePreview(null);
       setSelectedFile(null);
 
-      const successMsg = document.createElement('div');
+      const successMsg = document.createElement("div");
       successMsg.className =
-        'fixed top-4 right-4 bg-emerald-500 text-white px-6 py-3 rounded-xl shadow-lg z-50 flex items-center gap-2';
+        "fixed top-4 right-4 bg-emerald-500 text-white px-6 py-3 rounded-xl shadow-lg z-50 flex items-center gap-2";
       successMsg.innerHTML =
         '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg> <span>Imagen subida - Ahora guarda los cambios</span>';
       document.body.appendChild(successMsg);
       setTimeout(() => successMsg.remove(), 5000);
     } catch (err) {
-      console.error('Error uploading image:', err);
-      setError(err instanceof Error ? err.message : 'Error al subir la imagen');
+      console.error("Error uploading image:", err);
+      setError(err instanceof Error ? err.message : "Error al subir la imagen");
     } finally {
       setUploadingImage(false);
     }
@@ -277,7 +366,6 @@ export default function EditProfileProvider() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (!user || !token) return;
 
     setSaving(true);
@@ -285,7 +373,7 @@ export default function EditProfileProvider() {
     setSuccess(false);
 
     try {
-      const backendUrl = process.env.VITE_BACKEND_URL;
+      const backendUrl = getBackendUrl();
 
       const updateData: Partial<ProviderProfileForm> = {
         name: formData.name,
@@ -302,33 +390,41 @@ export default function EditProfileProvider() {
         city: formData.city,
         state: formData.state,
         postalCode: formData.postalCode,
+
+        // ✅ CLAVE: enviar ids
+        services: formData.services,
       };
 
-      if (formData.profileImgUrl && formData.profileImgUrl.trim() !== '') {
+      if (formData.profileImgUrl && formData.profileImgUrl.trim() !== "") {
         updateData.profileImgUrl = formData.profileImgUrl;
       }
 
       const response = await fetch(`${backendUrl}/provider/${user.id}`, {
-        method: 'PATCH',
+        method: "PATCH",
         headers: {
           Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(updateData),
       });
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => null);
-        throw new Error(errorData?.message || `Error al actualizar el perfil (${response.status})`);
+        throw new Error(
+          errorData?.message ||
+            `Error al actualizar el perfil (${response.status})`
+        );
       }
 
       setSuccess(true);
       setTimeout(() => {
-        window.location.href = '/provider/dashboard';
+        window.location.href = "/provider/dashboard";
       }, 2000);
     } catch (err) {
-      console.error('Error updating profile:', err);
-      setError(err instanceof Error ? err.message : 'Error al guardar los cambios');
+      console.error("Error updating profile:", err);
+      setError(
+        err instanceof Error ? err.message : "Error al guardar los cambios"
+      );
     } finally {
       setSaving(false);
     }
@@ -337,7 +433,7 @@ export default function EditProfileProvider() {
   const handleDeleteAccount = async () => {
     if (!user || !token) return;
 
-    if (deleteInput !== 'ELIMINAR') {
+    if (deleteInput !== "ELIMINAR") {
       setError('Debes escribir "ELIMINAR" para confirmar');
       return;
     }
@@ -346,28 +442,39 @@ export default function EditProfileProvider() {
     setError(null);
 
     try {
-      const backendUrl = process.env.VITE_BACKEND_URL;
+      const backendUrl = getBackendUrl();
       const response = await fetch(`${backendUrl}/provider/${user.id}`, {
-        method: 'DELETE',
+        method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
       });
 
-      if (!response.ok) {
-        throw new Error('Error al eliminar la cuenta');
-      }
+      if (!response.ok) throw new Error("Error al eliminar la cuenta");
 
       logout();
-      router.push('/');
+      router.push("/");
     } catch (err) {
-      console.error('Error deleting account:', err);
-      setError(err instanceof Error ? err.message : 'Error al eliminar la cuenta');
+      console.error("Error deleting account:", err);
+      setError(
+        err instanceof Error ? err.message : "Error al eliminar la cuenta"
+      );
     } finally {
       setDeleting(false);
     }
   };
+
+  // ✅ agrupar servicios por categoría
+  const servicesByCategory = allServices.reduce<Record<string, ServiceDto[]>>(
+    (acc, s) => {
+      const cat = s.category?.name || "Otros";
+      if (!acc[cat]) acc[cat] = [];
+      acc[cat].push(s);
+      return acc;
+    },
+    {}
+  );
 
   if (loading) {
     return (
@@ -388,7 +495,7 @@ export default function EditProfileProvider() {
           <div className="absolute top-0 right-0 w-96 h-96 bg-blue-300/20 rounded-full blur-3xl animate-pulse"></div>
           <div
             className="absolute bottom-0 left-0 w-96 h-96 bg-emerald-300/20 rounded-full blur-3xl animate-pulse"
-            style={{ animationDelay: '1s' }}
+            style={{ animationDelay: "1s" }}
           ></div>
         </div>
 
@@ -403,7 +510,9 @@ export default function EditProfileProvider() {
               <CheckCircle className="w-8 h-8 text-white" />
             </div>
             <div className="flex-1">
-              <p className="font-bold text-emerald-900 text-lg">¡Perfil actualizado con éxito!</p>
+              <p className="font-bold text-emerald-900 text-lg">
+                ¡Perfil actualizado con éxito!
+              </p>
               <p className="text-emerald-700">Redirigiendo al dashboard...</p>
             </div>
           </motion.div>
@@ -420,7 +529,9 @@ export default function EditProfileProvider() {
               <AlertCircle className="w-8 h-8 text-white" />
             </div>
             <div className="flex-1">
-              <p className="font-bold text-red-900 text-lg">Oops, algo salió mal</p>
+              <p className="font-bold text-red-900 text-lg">
+                Oops, algo salió mal
+              </p>
               <p className="text-red-700">{error}</p>
             </div>
           </motion.div>
@@ -439,13 +550,15 @@ export default function EditProfileProvider() {
             <motion.button
               whileHover={{ x: -5 }}
               whileTap={{ scale: 0.95 }}
-              onClick={() => router.push('/provider/dashboard')}
+              onClick={() => router.push("/provider/dashboard")}
               className="relative z-10 flex items-center gap-2 text-white hover:text-white/90 mb-4 bg-white/20 backdrop-blur-sm px-4 py-2 rounded-xl transition-all"
             >
               <ArrowLeft className="w-5 h-5" />
               <span className="font-semibold">Volver</span>
             </motion.button>
-            <h1 className="relative z-10 text-5xl font-bold text-white mb-2">Editar Perfil</h1>
+            <h1 className="relative z-10 text-5xl font-bold text-white mb-2">
+              Editar Perfil
+            </h1>
             <p className="relative z-10 text-white/90 text-lg">
               Actualiza tu información profesional
             </p>
@@ -532,9 +645,12 @@ export default function EditProfileProvider() {
 
               <div className="text-center max-w-md">
                 <p className="text-sm text-gray-600 mb-2">
-                  <strong>Click en el ícono de cámara</strong> para seleccionar una imagen
+                  <strong>Click en el ícono de cámara</strong> para seleccionar
+                  una imagen
                 </p>
-                <p className="text-xs text-gray-500">Formatos: JPG, PNG, WEBP, GIF • Máximo: 5MB</p>
+                <p className="text-xs text-gray-500">
+                  Formatos: JPG, PNG, WEBP, GIF • Máximo: 5MB
+                </p>
               </div>
             </motion.div>
 
@@ -548,7 +664,9 @@ export default function EditProfileProvider() {
                 <div className="p-3 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-xl shadow-lg">
                   <User className="w-6 h-6 text-white" />
                 </div>
-                <h3 className="text-2xl font-bold text-gray-900">Información Personal</h3>
+                <h3 className="text-2xl font-bold text-gray-900">
+                  Información Personal
+                </h3>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -598,7 +716,9 @@ export default function EditProfileProvider() {
                       className="w-full px-5 py-4 border-2 border-gray-200 rounded-2xl bg-gray-100/80 text-gray-500 cursor-not-allowed backdrop-blur-sm"
                     />
                     <div className="absolute right-4 top-1/2 -translate-y-1/2 bg-gray-200 px-3 py-1 rounded-full">
-                      <span className="text-xs font-semibold text-gray-600">No editable</span>
+                      <span className="text-xs font-semibold text-gray-600">
+                        No editable
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -770,7 +890,9 @@ export default function EditProfileProvider() {
                 <div className="p-3 bg-gradient-to-r from-emerald-500 to-green-500 rounded-xl shadow-lg">
                   <FileText className="w-6 h-6 text-white" />
                 </div>
-                <h3 className="text-2xl font-bold text-gray-900">Acerca de mí</h3>
+                <h3 className="text-2xl font-bold text-gray-900">
+                  Acerca de mí
+                </h3>
               </div>
 
               <textarea
@@ -794,7 +916,9 @@ export default function EditProfileProvider() {
                 <div className="p-3 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-xl shadow-lg">
                   <CalendarDays className="w-6 h-6 text-white" />
                 </div>
-                <h3 className="text-2xl font-bold text-gray-900">Disponibilidad</h3>
+                <h3 className="text-2xl font-bold text-gray-900">
+                  Disponibilidad
+                </h3>
               </div>
 
               {/* Days */}
@@ -810,8 +934,8 @@ export default function EditProfileProvider() {
                       onClick={() => handleDayToggle(day)}
                       className={`px-4 py-3 rounded-xl font-semibold transition-all ${
                         formData.days.includes(day)
-                          ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-lg'
-                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                          ? "bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-lg"
+                          : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                       }`}
                     >
                       {DAYS_IN_SPANISH[day]}
@@ -834,8 +958,8 @@ export default function EditProfileProvider() {
                       onClick={() => handleHourToggle(hour)}
                       className={`px-4 py-3 rounded-xl font-semibold transition-all ${
                         formData.hours.includes(hour)
-                          ? 'bg-gradient-to-r from-emerald-500 to-green-500 text-white shadow-lg'
-                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                          ? "bg-gradient-to-r from-emerald-500 to-green-500 text-white shadow-lg"
+                          : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                       }`}
                     >
                       {hour}
@@ -843,6 +967,73 @@ export default function EditProfileProvider() {
                   ))}
                 </div>
               </div>
+            </motion.div>
+
+            {/* ✅ NUEVO: Servicios que ofreces */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.65 }}
+              className="pt-8 border-t-2 border-gray-200"
+            >
+              <div className="flex items-center gap-3 mb-6">
+                <div className="p-3 bg-gradient-to-r from-indigo-500 to-violet-500 rounded-xl shadow-lg">
+                  <FileText className="w-6 h-6 text-white" />
+                </div>
+                <h3 className="text-2xl font-bold text-gray-900">
+                  Servicios que ofreces
+                </h3>
+              </div>
+
+              {Object.keys(servicesByCategory).length === 0 ? (
+                <p className="text-gray-600">No hay servicios disponibles.</p>
+              ) : (
+                <div className="space-y-8">
+                  {Object.entries(servicesByCategory).map(
+                    ([catName, services]) => (
+                      <div key={catName}>
+                        <h4 className="text-lg font-bold text-gray-800 mb-3">
+                          {catName}
+                        </h4>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {services.map((s) => {
+                            const selected = formData.services.includes(s.id);
+                            const price =
+                              typeof s.unitaryPrice === "string"
+                                ? Number(s.unitaryPrice)
+                                : s.unitaryPrice;
+
+                            return (
+                              <button
+                                key={s.id}
+                                type="button"
+                                onClick={() => handleServiceToggle(s.id)}
+                                className={`text-left p-5 rounded-2xl border-2 transition-all ${
+                                  selected
+                                    ? "bg-gradient-to-r from-indigo-500 to-violet-500 text-white border-transparent shadow-lg"
+                                    : "bg-white/60 text-gray-800 border-gray-200 hover:bg-gray-50"
+                                }`}
+                              >
+                                <div className="font-bold text-base">
+                                  {s.name}
+                                </div>
+                                <div
+                                  className={`${
+                                    selected ? "text-white/90" : "text-gray-600"
+                                  } mt-1`}
+                                >
+                                  ${price?.toFixed?.(2) ?? price}
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )
+                  )}
+                </div>
+              )}
             </motion.div>
 
             {/* Action Buttons */}
@@ -856,13 +1047,17 @@ export default function EditProfileProvider() {
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 type="button"
-                onClick={() => router.push('/provider/dashboard')}
+                onClick={() => router.push("/provider/dashboard")}
                 className="flex-1 px-8 py-4 border-2 border-gray-300 text-gray-700 rounded-2xl hover:bg-gray-50 hover:border-gray-400 transition-all font-bold text-lg shadow-md"
               >
                 Cancelar
               </motion.button>
+
               <motion.button
-                whileHover={{ scale: 1.02, boxShadow: '0 20px 40px rgba(37, 99, 235, 0.3)' }}
+                whileHover={{
+                  scale: 1.02,
+                  boxShadow: "0 20px 40px rgba(37, 99, 235, 0.3)",
+                }}
                 whileTap={{ scale: 0.98 }}
                 type="submit"
                 disabled={saving}
@@ -912,9 +1107,11 @@ export default function EditProfileProvider() {
                   <div className="flex items-start gap-3 mb-4">
                     <AlertCircle className="w-6 h-6 text-red-600 flex-shrink-0 mt-1" />
                     <div>
-                      <h3 className="text-lg font-bold text-red-900 mb-1">Zona de Peligro</h3>
+                      <h3 className="text-lg font-bold text-red-900 mb-1">
+                        Zona de Peligro
+                      </h3>
                       <p className="text-sm text-red-700">
-                        Esta acción es <strong>permanente</strong> y{' '}
+                        Esta acción es <strong>permanente</strong> y{" "}
                         <strong>no se puede deshacer</strong>.
                       </p>
                     </div>
@@ -955,7 +1152,8 @@ export default function EditProfileProvider() {
                   ¿Estás completamente seguro?
                 </h2>
                 <p className="text-gray-600 mb-4">
-                  Esta acción eliminará permanentemente tu cuenta y todos tus datos.
+                  Esta acción eliminará permanentemente tu cuenta y todos tus
+                  datos.
                   <strong className="block mt-2 text-red-600">
                     Esta acción NO se puede deshacer.
                   </strong>
@@ -964,7 +1162,8 @@ export default function EditProfileProvider() {
 
               <div className="mb-6">
                 <label className="block text-sm font-bold text-gray-700 mb-2">
-                  Escribe <span className="text-red-600">ELIMINAR</span> para confirmar:
+                  Escribe <span className="text-red-600">ELIMINAR</span> para
+                  confirmar:
                 </label>
                 <input
                   type="text"
@@ -979,7 +1178,7 @@ export default function EditProfileProvider() {
                 <button
                   onClick={() => {
                     setShowDeleteConfirm(false);
-                    setDeleteInput('');
+                    setDeleteInput("");
                   }}
                   className="flex-1 px-6 py-3 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-colors font-semibold"
                 >
@@ -987,7 +1186,7 @@ export default function EditProfileProvider() {
                 </button>
                 <button
                   onClick={handleDeleteAccount}
-                  disabled={deleteInput !== 'ELIMINAR' || deleting}
+                  disabled={deleteInput !== "ELIMINAR" || deleting}
                   className="flex-1 px-6 py-3 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {deleting ? (
@@ -996,7 +1195,7 @@ export default function EditProfileProvider() {
                       Eliminando...
                     </>
                   ) : (
-                    'Eliminar mi cuenta'
+                    "Eliminar mi cuenta"
                   )}
                 </button>
               </div>
