@@ -1,4 +1,11 @@
 {
+  "/_not-found/page": "app/_not-found/page.js",
+  "/blog/page": "app/blog/page.js",
+  "/client/home/page": "app/client/home/page.js",
+  "/client/profile/page": "app/client/profile/page.js",
+  "/client/providers/page": "app/client/providers/page.js",
+  "/login/page": "app/login/page.js",
   "/page": "app/page.js",
-  "/provider/profile/page": "app/provider/profile/page.js"
+  "/register/client/page": "app/register/client/page.js",
+  "/register/page": "app/register/page.js"
 }
