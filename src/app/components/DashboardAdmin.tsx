@@ -1,3 +1,4 @@
+//CleenGo-Front/src/app/components/DashboardAdmin.tsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -26,63 +27,76 @@ export default function AdminDashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [errorStats, setErrorStats] = useState<string | null>(null);
 
-  // 📌 USE EFFECT — cargar STATS reales del backend
+  // ✅ Cargar STATS reales del backend
   useEffect(() => {
     const fetchDashboard = async () => {
       try {
+        setErrorStats(null);
+
         const token = localStorage.getItem("token");
+        if (!token) {
+          throw new Error("No hay token. Inicia sesión como admin.");
+        }
 
-        const res = await fetch(
-          `${process.env.VITE_BACKEND_URL}admin/dashboard`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
+        const baseUrl = process.env.VITE_BACKEND_URL;
+        if (!baseUrl) {
+          throw new Error("VITE_BACKEND_URL no está definida.");
+        }
 
-        if (!res.ok) throw new Error("Error obteniendo estadísticas");
-        console.log("res.ok:", res.ok);
+        // ✅ asegura que quede: {base}/admin/dashboard
+        const url = new URL("/admin/dashboard", baseUrl).toString();
 
-        // ❗ YA NO LEEMOS .text() — SOLO json()
-        const data = await res.json();
+        const res = await fetch(url, {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          cache: "no-store",
+        });
+
+        if (res.status === 401) {
+          throw new Error("401: Token inválido o expirado.");
+        }
+        if (res.status === 403) {
+          throw new Error("403: Acceso denegado. Necesitas rol ADMIN.");
+        }
+        if (!res.ok) {
+          throw new Error(`Error obteniendo estadísticas (${res.status}).`);
+        }
+
+        const data = (await res.json()) as DashboardStats;
         setStats(data);
-
       } catch (err: any) {
         console.error(err);
-        setErrorStats(err.message);
+        setErrorStats(
+          err?.message ?? "Error desconocido obteniendo estadísticas."
+        );
       }
     };
 
     fetchDashboard();
   }, []);
 
-  // 📌 Mantienes tus usuarios mock hasta que el back esté listo
-  // useEffect(() => {
-  //   const data: User[] = [
-  //     { id: "1", name: "Paulo", email: "paulo@gmail.com", role: "client" },
-  //     { id: "2", name: "Maria", email: "maria@gmail.com", role: "provider" },
-  //     { id: "3", name: "Carlos", email: "carlos@gmail.com", role: "client" },
-  //     { id: "4", name: "Lucia", email: "lucia@gmail.com", role: "provider" },
-  //   ];
-  //   setUsers(data);
-  // }, []);
-
   const filteredUsers =
     filter === "all" ? users : users.filter((u) => u.role === filter);
 
   const handleDelete = async (id: string) => {
-    const confirmDelete = window.confirm("¿Seguro que deseas eliminar este usuario?");
+    const confirmDelete = window.confirm(
+      "¿Seguro que deseas eliminar este usuario?"
+    );
     if (!confirmDelete) return;
 
     setUsers((prev) => prev.filter((u) => u.id !== id));
     alert("Usuario eliminado.");
   };
 
-  // 📌 Totales desde backend, fallback al mock
+  // Totales desde backend, fallback al mock
   const totals = {
-    clients: stats?.totalClients ?? users.filter((u) => u.role === "client").length,
-    providers: stats?.totalProviders ?? users.filter((u) => u.role === "provider").length,
+    clients:
+      stats?.totalClients ?? users.filter((u) => u.role === "client").length,
+    providers:
+      stats?.totalProviders ??
+      users.filter((u) => u.role === "provider").length,
     totalUsers: stats?.totalUsers ?? users.length,
     ingresos: stats?.ingresos ?? 0,
   };
@@ -97,7 +111,6 @@ export default function AdminDashboard() {
 
       {/* --- Estadísticas --- */}
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-6 mb-10">
-
         {/* Total Usuarios */}
         <div className="bg-white p-6 rounded-2xl shadow-md flex items-center gap-4">
           <Users className="w-12 h-12 text-[#0C2340]" />
@@ -139,21 +152,27 @@ export default function AdminDashboard() {
       <div className="flex gap-4 mb-6">
         <button
           onClick={() => setFilter("all")}
-          className={`px-4 py-2 rounded-xl shadow ${filter === "all" ? "bg-[#0C2340] text-white" : "bg-white"}`}
+          className={`px-4 py-2 rounded-xl shadow ${
+            filter === "all" ? "bg-[#0C2340] text-white" : "bg-white"
+          }`}
         >
           Todos
         </button>
 
         <button
           onClick={() => setFilter("client")}
-          className={`px-4 py-2 rounded-xl shadow ${filter === "client" ? "bg-[#0C2340] text-white" : "bg-white"}`}
+          className={`px-4 py-2 rounded-xl shadow ${
+            filter === "client" ? "bg-[#0C2340] text-white" : "bg-white"
+          }`}
         >
           Clientes
         </button>
 
         <button
           onClick={() => setFilter("provider")}
-          className={`px-4 py-2 rounded-xl shadow ${filter === "provider" ? "bg-[#0C2340] text-white" : "bg-white"}`}
+          className={`px-4 py-2 rounded-xl shadow ${
+            filter === "provider" ? "bg-[#0C2340] text-white" : "bg-white"
+          }`}
         >
           Proveedores
         </button>
