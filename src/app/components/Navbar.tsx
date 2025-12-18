@@ -421,13 +421,13 @@ export default function Navbar() {
       >
         Blog
       </Link>
-      <Link
+      {/* <Link
         href="/client/appointments"
         onClick={closeAll}
         className="text-gray-700 font-medium hover:text-teal-500 transition"
       >
         Mis citas
-      </Link>
+      </Link> */}
       <Link
         href="/client/profile"
         onClick={closeAll}
