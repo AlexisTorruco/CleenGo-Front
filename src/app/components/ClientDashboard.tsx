@@ -85,6 +85,9 @@ export default function ClientDashboard() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [activeTab, setActiveTab] = useState<ClientTabKey>("pending");
 
+  // ✅ PERFIL VIVO (lo que se edita en Edit Profile)
+  const [clientProfile, setClientProfile] = useState<UserLite | null>(null);
+
   // unread map: appointmentId -> count
   const [unreadByAppointment, setUnreadByAppointment] = useState<
     Record<string, number>
@@ -137,7 +140,7 @@ export default function ClientDashboard() {
   // FETCH CITAS
   // =========================
   const fetchAppointments = useCallback(async () => {
-    if (!token) return;
+    if (!backendUrl || !token) return;
 
     try {
       setLoading(true);
@@ -176,6 +179,43 @@ export default function ClientDashboard() {
   }, [backendUrl, token]);
 
   // =========================
+  // FETCH PERFIL CLIENTE (VIVO)
+  // =========================
+  const fetchClientProfile = useCallback(async () => {
+    if (!backendUrl || !token || !user?.id) return;
+
+    const res = await fetch(`${backendUrl}/user/profile/${user.id}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        accept: "application/json",
+      },
+      cache: "no-store",
+    });
+
+    if (!res.ok) return;
+
+    const data = await res.json();
+
+    setClientProfile({
+      id: user.id,
+      name: data?.name ?? user?.name ?? "",
+      surname: data?.surname ?? user?.surname ?? "",
+      email: data?.email ?? user?.email ?? "",
+      profileImgUrl: data?.profileImgUrl ?? null,
+      phone: data?.phone ?? null,
+      role: user?.role,
+    });
+  }, [
+    backendUrl,
+    token,
+    user?.id,
+    user?.email,
+    user?.name,
+    user?.surname,
+    user?.role,
+  ]);
+
+  // =========================
   // FETCH UNREAD SUMMARY
   // =========================
   const fetchUnreadSummary = useCallback(async () => {
@@ -211,14 +251,25 @@ export default function ClientDashboard() {
 
     fetchAppointments();
     fetchUnreadSummary();
+    fetchClientProfile();
 
     const onFocus = () => {
       fetchAppointments();
       fetchUnreadSummary();
+      fetchClientProfile();
     };
+
     window.addEventListener("focus", onFocus);
     return () => window.removeEventListener("focus", onFocus);
-  }, [mounted, user, token, router, fetchAppointments, fetchUnreadSummary]);
+  }, [
+    mounted,
+    user,
+    token,
+    router,
+    fetchAppointments,
+    fetchUnreadSummary,
+    fetchClientProfile,
+  ]);
 
   // Polling suave para badge (por si el otro manda mensajes y tú estás en dashboard)
   useEffect(() => {
@@ -255,7 +306,6 @@ export default function ClientDashboard() {
   const stats = useMemo(() => {
     const total = appointments.length;
     const pending = pendingList.length;
-
     const completed = completedList.length;
 
     // Próximas = confirmadas y date >= hoy
@@ -298,6 +348,9 @@ export default function ClientDashboard() {
     );
   }
 
+  // fallback por si el profile aún no llega
+  const displayProfile = clientProfile ?? user;
+
   // =========================
   // RENDER
   // =========================
@@ -328,20 +381,22 @@ export default function ClientDashboard() {
           <div className="p-8 flex flex-col md:flex-row items-center gap-6">
             <div className="relative group">
               <div className="absolute -inset-1 bg-gradient-to-r from-blue-500 via-cyan-500 to-emerald-500 rounded-full blur opacity-40 group-hover:opacity-75 transition-opacity" />
-              {user.profileImgUrl ? (
+
+              {displayProfile.profileImgUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
-                  src={user.profileImgUrl}
+                  src={displayProfile.profileImgUrl as string}
                   alt="Foto de perfil"
                   className="relative w-28 h-28 rounded-full object-cover border-4 border-white"
                 />
               ) : (
                 <div className="relative w-28 h-28 rounded-full bg-gradient-to-br from-blue-500 via-cyan-500 to-emerald-500 flex items-center justify-center border-4 border-white">
                   <span className="text-3xl font-extrabold text-white">
-                    {user.name?.charAt(0)?.toUpperCase() ?? "U"}
+                    {displayProfile.name?.charAt(0)?.toUpperCase() ?? "U"}
                   </span>
                 </div>
               )}
+
               <div className="absolute -bottom-2 -right-2 bg-gradient-to-r from-emerald-500 to-green-500 rounded-full p-2 shadow-lg">
                 <UserIcon className="w-5 h-5 text-white" />
               </div>
@@ -349,9 +404,11 @@ export default function ClientDashboard() {
 
             <div className="flex-1 text-center md:text-left">
               <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 via-cyan-600 to-emerald-600 bg-clip-text text-transparent mb-2">
-                {user.name} {user.surname ?? ""}
+                {displayProfile.name} {displayProfile.surname ?? ""}
               </h1>
-              <p className="text-gray-600 font-medium">{user.email}</p>
+              <p className="text-gray-600 font-medium">
+                {displayProfile.email}
+              </p>
             </div>
 
             <motion.button
