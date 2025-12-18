@@ -26,7 +26,6 @@ export interface RegisterClientRequest {
   password: string;
   confirmPassword: string;
   birthDate: string;
-
 }
 
 export interface RegisterClientResponse {
@@ -49,7 +48,6 @@ export interface RegisterProviderResponse {
   provider: Provider;
   token?: string;
 }
-
 
 // --------- Tipos para login normal ---------
 export interface LoginRequest {
@@ -78,6 +76,15 @@ export interface ThirdPartyLoginResponse {
   user: User;
 }
 
+// --------- Tipos para recuperar contraseña ---------
+export interface RequestPasswordResetRequest {
+  email: string;
+}
+
+export interface RequestPasswordResetResponse {
+  message: string;
+}
+
 // --------- Servicios ---------
 export async function registerClient(data: RegisterClientRequest) {
   const response = await http.post<RegisterClientResponse>(
@@ -100,7 +107,6 @@ export async function registerProvider(data: RegisterProviderRequest) {
   return response.data;
 }
 
-
 // Login / registro con Google (Supabase OAuth)
 export async function thirdPartyLogin(
   role: "client" | "provider",
@@ -113,3 +119,31 @@ export async function thirdPartyLogin(
   return response.data;
 }
 
+// --------- Servicio: solicitar recuperación de contraseña ---------
+export async function requestPasswordReset(data: RequestPasswordResetRequest) {
+  const response = await http.post<RequestPasswordResetResponse>(
+    "/auth/recover-password",
+    data
+  );
+  return response.data;
+}
+
+// --------- Tipos para restablecer contraseña ---------
+export interface ResetPasswordRequest {
+  token: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+
+export interface ResetPasswordResponse {
+  message: string;
+}
+
+// --------- Servicio: restablecer contraseña ---------
+export async function resetPassword(data: ResetPasswordRequest) {
+  const response = await http.post<ResetPasswordResponse>(
+    "/auth/reset-password",
+    data
+  );
+  return response.data;
+}
