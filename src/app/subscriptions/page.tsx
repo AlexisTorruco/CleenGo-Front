@@ -155,28 +155,52 @@ export default function SubscriptionsPage() {
     loadMe();
   }, [router, token, user]);
 
-  // 3) Determinar plan actual
+  // 3) Determinar plan actual (Gratuito)
   const currentPlan = useMemo(() => {
+    // Si el usuario ya tiene un plan asignado, usar ese
     if (mySub?.plan?.id) return mySub.plan;
 
     const activePlans = plans.filter((p) => p?.isActive === true);
     if (activePlans.length === 0) return null;
 
+    // Buscar plan "Gratuito" por nombre (case insensitive)
+    const freePlan = activePlans.find((p) =>
+      p.name.toLowerCase().includes('gratis') ||
+      p.name.toLowerCase().includes('free') ||
+      p.name.toLowerCase().includes('básico') ||
+      p.name.toLowerCase().includes('basico')
+    );
+
+    // Si existe plan gratuito, retornarlo
+    if (freePlan) return freePlan;
+
+    // Si no, retornar el de menor precio
     const sorted = [...activePlans].sort((a, b) => Number(a.price) - Number(b.price));
     return sorted[0] || null;
   }, [mySub, plans]);
 
-  // 4) Determinar plan de upgrade
+  // 4) Determinar plan de upgrade (Premium)
   const upgradePlan = useMemo(() => {
     const activePlans = plans.filter((p) => p?.isActive === true);
     if (activePlans.length === 0) return null;
 
+    // Excluir el plan actual
     const candidates = currentPlan?.id
       ? activePlans.filter((p) => p.id !== currentPlan.id)
       : activePlans;
 
     if (candidates.length === 0) return null;
 
+    // Buscar plan "Premium" por nombre (case insensitive)
+    const premiumPlan = candidates.find((p) =>
+      p.name.toLowerCase().includes('premium') ||
+      p.name.toLowerCase().includes('pro')
+    );
+
+    // Si existe plan premium, retornarlo
+    if (premiumPlan) return premiumPlan;
+
+    // Si no, retornar el de mayor precio
     const sorted = [...candidates].sort((a, b) => Number(b.price) - Number(a.price));
     return sorted[0] || null;
   }, [plans, currentPlan]);

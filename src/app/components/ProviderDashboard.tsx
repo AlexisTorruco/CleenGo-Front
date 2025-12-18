@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import {
   Calendar,
@@ -133,6 +133,7 @@ type SubscriptionResponse = {
 export default function ProviderDashboard() {
   const { user, token, logout } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const backendUrl = process.env.VITE_BACKEND_URL;
 
   const [loading, setLoading] = useState(true);
@@ -360,6 +361,23 @@ export default function ProviderDashboard() {
     window.addEventListener('focus', handleFocus);
     return () => window.removeEventListener('focus', handleFocus);
   }, [user, token, router, fetchData, fetchSubscription]);
+
+  // Detectar parámetro de refresh después de un pago exitoso
+  useEffect(() => {
+    const refresh = searchParams.get('refresh');
+    if (refresh === 'premium') {
+      console.log('🎉 Detectado refresh de premium, recargando suscripción...');
+      // Recargar la suscripción después de un breve delay para que el webhook termine
+      setTimeout(() => {
+        fetchSubscription();
+      }, 1000);
+
+      // Limpiar el parámetro de la URL sin recargar la página
+      const url = new URL(window.location.href);
+      url.searchParams.delete('refresh');
+      window.history.replaceState({}, '', url.toString());
+    }
+  }, [searchParams, fetchSubscription]);
 
   const refreshUnreadByAppointment = useCallback(async () => {
     if (!token || !user?.id) return;
