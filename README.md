@@ -1,47 +1,74 @@
-## 🟩 **CleenGo-Front/README.md**
+# 🧼 CleenGo – Frontend Web App
 
-```md
-# 💚 CleenGo – Frontend (React + Vite)
+Frontend del proyecto **CleenGo**, desarrollado como proyecto final del **Henry Bootcamp**.  
+Aplicación web que actúa como interfaz de usuario para consumir y validar la lógica del backend del sistema.
 
-> Proyecto final Henry Bootcamp – Interfaz web de CleenGo.  
-> Plataforma que conecta clientes con proveedores de limpieza y mantenimiento.
-```
-
-## 🚀 Tecnologías principales
-
-- [React](https://react.dev/) + [Vite](https://vitejs.dev/)
-- [TypeScript](https://www.typescriptlang.org/)
-- [Material UI](https://mui.com/)
-- [React Router](https://reactrouter.com/)
-- [Axios](https://axios-http.com/)
-- [SweetAlert2](https://sweetalert2.github.io/)
-- [Auth0](https://auth0.com/)
-- [Stripe](https://stripe.com/)
-- [Figma](https://www.figma.com/) – diseño visual
+> 📌 **Rol principal:** Backend Developer  
+> 📌 **Aporte en frontend:** Integración, soporte y resolución de conflictos  
+> 📌 **Enfoque:** Consumo de APIs, autenticación, flujos de usuario y comunicación backend–frontend
 
 ---
 
-## ⚙️ Requisitos previos
+## 🚀 Stack tecnológico
 
-- Node.js v20+
-- Backend corriendo (CleenGo-Back)
-- Variables de entorno configuradas (`.env.development` o `.env.production`)
+- **Next.js** – Framework React
+- **TypeScript** – Tipado estático
+- **Tailwind CSS** – Estilos
+- **Axios** – Consumo de API REST
+- **Socket.IO** – Comunicación en tiempo real (chat)
+- **SweetAlert2** – Alertas y feedback UX
+- **JWT** – Autenticación
+- **Vercel** – Deploy
 
 ---
 
-## 🔧 Instalación y configuración
+## 🔑 Funcionalidades principales
+
+- Interfaz para registro y autenticación de usuarios y proveedores
+- Consumo de APIs backend (NestJS)
+- Gestión de perfiles y disponibilidad
+- Creación y visualización de citas
+- Dashboards según rol (cliente / proveedor / admin)
+- Chat en tiempo real integrado con backend
+- Validaciones y feedback visual para apoyar los flujos backend
+- Diseño responsive
+
+---
+
+## 🌐 Demo en producción
+
+🔗 https://cleengo-front-one.vercel.app
+
+---
+
+## ⚙️ Instalación y ejecución local
+
+### Requisitos
+- Node.js v18+
+- Variables de entorno configuradas
+
+### Pasos
 
 ```bash
-# Clonar el repositorio
-git clone https://github.com/<equipo>/CleenGo-Front.git
+git clone https://github.com/AlexisTorruco/CleenGo-Front.git
 cd CleenGo-Front
-
-# Instalar dependencias
 npm install
-
-# Copiar y configurar entorno
-cp .env.example .env.development
-
-# Ejecutar modo desarrollo
+cp .env.example .env.local
 npm run dev
 ```
+
+## El frontend corre por defecto en:
+http://localhost:5173
+
+## 🔗 Backend relacionado
+👉 https://github.com/AlexisTorruco/CleenGo-Back
+
+### 👤 Autor
+
+Alexis Torruco
+
+Frontend Developer | React | Next.js | TypeScript
+
+Proyecto realizado durante Henry Bootcamp
+
+
